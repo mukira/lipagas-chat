@@ -1,0 +1,101 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    restart: always
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
+    environment:
+      - REDIS_PASSWORD=redis_password
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+    command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
+
+  sidekiq:
+    image: chatwoot/chatwoot:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+
+  typebot-builder:
+    image: baptistearno/typebot-builder:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8082:3000"
+
+  typebot-viewer:
+    image: baptistearno/typebot-viewer:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8083:3000"
+
+  lipagas-bridge:
+    build: ../lipagas_bridge
+    env_file: .env
+    depends_on:
+      - redis
+    ports:
+      - "4000:4000"
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - chatwoot
+      - typebot-builder
+      - typebot-viewer
+      - lipagas-bridge
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres-data:
+  redis-data:
