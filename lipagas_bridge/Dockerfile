@@ -35,10 +35,11 @@ WORKDIR /app
 ENV MIX_ENV=prod
 ENV PORT=4000
 
-# Copy from build stage
-COPY --from=build /app/_build/prod/lib/lipagas_bridge ./lipagas_bridge
+COPY --from=build /app/_build ./_build
 COPY --from=build /app/mix.exs ./mix.exs
+COPY --from=build /app/mix.lock ./mix.lock
 COPY --from=build /app/deps ./deps
+COPY --from=build /app/lib ./lib
 COPY --from=build /root/.mix /root/.mix
 
 # Expose the application port

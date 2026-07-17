@@ -2,7 +2,7 @@ version: '3'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: always
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -31,24 +31,31 @@ services:
 
   chatwoot:
     image: chatwoot/chatwoot:latest
+    restart: always
     env_file: .env
     depends_on:
       - postgres
       - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
     ports:
       - "3000:3000"
     command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
 
   sidekiq:
     image: chatwoot/chatwoot:latest
+    restart: always
     env_file: .env
     depends_on:
       - postgres
       - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
     command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
 
   typebot-builder:
     image: baptistearno/typebot-builder:latest
+    restart: always
     env_file: .env
     depends_on:
       - postgres
@@ -58,6 +65,7 @@ services:
 
   typebot-viewer:
     image: baptistearno/typebot-viewer:latest
+    restart: always
     env_file: .env
     depends_on:
       - postgres
@@ -67,6 +75,7 @@ services:
 
   lipagas-bridge:
     build: ../lipagas_bridge
+    restart: always
     env_file: .env
     depends_on:
       - redis
@@ -91,6 +100,7 @@ services:
 
   certbot:
     image: certbot/certbot
+    restart: always
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
