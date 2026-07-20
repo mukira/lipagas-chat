@@ -104,3 +104,7 @@ CLAUDE.local.md
 .pnpm-store/*
 local/
 Procfile.worktree
+
+# Ignore Certbot SSL keys
+unified-deployment/certbot/conf/
+unified-deployment/certbot/www/
