@@ -37,6 +37,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
     phone    = extract_phone(payload)
     content  = payload["content"] || ""
     msg_lower = String.downcase(String.trim(content))
+    user_name = get_in(payload, ["sender", "name"]) || 
+                get_in(payload, ["conversation", "meta", "sender", "name"]) || "Citizen"
 
     meta = Map.get(@inbox_meta, inbox_id)
     if is_nil(meta) or is_nil(phone) or phone == "" do
@@ -74,7 +76,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: wait_msg}}, meta)
           
           Task.start(fn ->
-            result_text = PresidentialBridge.ProjectSearch.search(content, lang)
+            result_text = PresidentialBridge.ProjectSearch.search(content, lang, user_name)
             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: result_text}}, meta)
             
             # Reset Typebot back to Main Menu silently

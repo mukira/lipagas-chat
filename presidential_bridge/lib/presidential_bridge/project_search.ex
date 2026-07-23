@@ -7,7 +7,7 @@ defmodule PresidentialBridge.ProjectSearch do
   Takes a user location string, queries Groq to construct a search query, hits Serper,
   and recurses up to 1 time if no projects are found. Returns the final formatted PR message.
   """
-  def search(location, language \\ "english") do
+  def search(location, language \\ "english", user_name \\ "Citizen") do
     # 1. First Pass
     query = build_query(location, false)
     results = run_serper(query)
@@ -23,7 +23,7 @@ defmodule PresidentialBridge.ProjectSearch do
         {broader_results, broader_query}
       end
 
-    format_response(final_results, final_query, language)
+    format_response(final_results, final_query, language, user_name)
   end
 
   defp build_query(location, is_recursive) do
@@ -75,18 +75,19 @@ defmodule PresidentialBridge.ProjectSearch do
     end
   end
 
-  defp format_response(serper_json_str, query_used, language) do
+  defp format_response(serper_json_str, query_used, language, user_name) do
     # Fetch internal context to blend in if we want, but Serper is enough.
     prompt = """
-    You are an expert PR copywriter for the President of Kenya.
+    You are William Ruto, the President of Kenya, texting a citizen named #{user_name} on WhatsApp.
     Based on the following Google search results for the query: "#{query_used}", 
-    write a highly-positive, engaging message to the citizen explaining the development projects in their area.
+    write a highly-personal, direct message to #{user_name} explaining the development projects in their area.
     
     Rules:
+    - Persona: Direct, warm, and conversational. Sound exactly like a personal WhatsApp text from the President to #{user_name}. (e.g. "#{user_name}, here's what I'm doing in your area...")
+    - Formatting: Do NOT write paragraphs. Give ONLY the raw facts using bullet points: Project Name, Status, Budget (if available).
     - Use WhatsApp bold formatting (e.g., *Project Name*).
-    - Use emojis.
-    - Sound like you are speaking on behalf of the President (e.g., "We are building...").
-    - If the results are completely empty or irrelevant, politely explain that we are continuously expanding projects across the nation and note their region for future consideration.
+    - Use emojis tastefully.
+    - If the results are completely empty or irrelevant, politely explain to #{user_name} that you are continuously expanding projects and you've noted their region.
     - Write the response entirely in: #{String.upcase(language)}.
     
     Search Results:
@@ -95,7 +96,7 @@ defmodule PresidentialBridge.ProjectSearch do
 
     case PresidentialBridge.AIProxy.call_groq_round_robin(prompt) do
       {:ok, formatted} -> String.trim(formatted)
-      _ -> "I'm sorry, I couldn't fetch the projects for your location right now. Please try again later."
+      _ -> "I'm sorry #{user_name}, I couldn't fetch the projects for your location right now. Please try again later."
     end
   end
 end
