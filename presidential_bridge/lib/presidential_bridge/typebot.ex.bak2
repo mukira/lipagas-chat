@@ -1,0 +1,94 @@
+defmodule PresidentialBridge.Typebot do
+  @moduledoc "Typebot API client using PresidentialBridge.HTTP"
+  alias PresidentialBridge.{Config, HTTP}
+
+  def start_chat(slug, prefilled_vars \\ %{}) do
+    url = "#{Config.typebot_base_url()}/#{slug}/startChat"
+    case HTTP.post_json(url, %{isOnlyRegistering: false, prefilledVariables: prefilled_vars}) do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok, body["sessionId"], body["messages"] || [], body["input"]}
+      {:ok, resp} ->
+        {:error, "Typebot start #{resp.status}: #{inspect(resp.body)}"}
+      {:error, e} ->
+        {:error, e}
+    end
+  end
+
+  def continue_chat(session_id, message) do
+    url = "#{Config.typebot_continue_url()}/#{session_id}/continueChat"
+    case HTTP.post_json(url, %{message: message}) do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok, body["messages"] || [], body["input"]}
+      {:ok, %{status: 404}} ->
+        {:error, :session_expired}
+      {:ok, resp} ->
+        {:error, "Typebot continue #{resp.status}"}
+      {:error, e} ->
+        {:error, e}
+    end
+  end
+
+  def parse_messages(messages, variables_map \\ %{})
+
+  def parse_messages(messages, variables_map) when is_list(messages) do
+    Enum.reduce(messages, {"", nil}, fn 
+      msg, {text_acc, img_acc} when is_map(msg) ->
+        case msg["type"] do
+          "text" ->
+            rich = get_in(msg, ["content", "richText"]) || []
+            new_text = rich
+              |> Enum.map(fn rt ->
+                (is_map(rt) && rt["children"] || [])
+                |> Enum.map_join("", fn c ->
+                  cond do
+                    is_map(c) and c["type"] == "inline-variable" ->
+                      var_id = c["variableId"]
+                      var_name = resolve_var_id(var_id)
+                      Map.get(variables_map, var_name) || Map.get(variables_map, var_id) || get_in(c, ["children", Access.at(0), "text"]) || ""
+                    is_map(c) ->
+                      c["text"] || ""
+                    true ->
+                      ""
+                  end
+                end)
+              end)
+              |> Enum.join("\n")
+            {text_acc <> new_text <> "\n\n", img_acc}
+          "image" ->
+            {text_acc, get_in(msg, ["content", "url"]) || img_acc}
+          _ ->
+            {text_acc, img_acc}
+        end
+      _, acc -> acc
+    end)
+    |> then(fn {text, img} -> {String.trim(text), img} end)
+  end
+  def parse_messages(_, _variables_map), do: {"", nil}
+
+  defp resolve_var_id("czx1vosksjwfmt52egtx1jtj7"), do: "SavedLocation"
+  defp resolve_var_id("cpp3kxqsb3b3o2hdf6dv7umoo"), do: "contact_name"
+  defp resolve_var_id("c38gq5ykcvm9axzodrgpkh74s"), do: "Location"
+  defp resolve_var_id(_), do: nil
+
+  def get_active_choices(input) when is_map(input) do
+    case input["type"] do
+      "choice input" ->
+        (input["items"] || []) |> Enum.map(fn i -> String.trim((is_map(i) && i["content"]) || "") end)
+      _ -> []
+    end
+  end
+  def get_active_choices(_), do: []
+
+  def get_bot_slug(keyword) do
+    bots_path = "/root/chatwoot-typebot-bridge/bots.json"
+    case File.read(bots_path) do
+      {:ok, content} ->
+        case Jason.decode(content) do
+          {:ok, bots} ->
+            Map.get(bots, String.downcase(keyword)) || Map.get(bots, "default") || Config.typebot_default_slug()
+          _ -> Config.typebot_default_slug()
+        end
+      _ -> Config.typebot_default_slug()
+    end
+  end
+end

@@ -1,0 +1,515 @@
+defmodule PresidentialBridge.PresidentialHandler do
+  @moduledoc """
+  Handles all incoming messages for the LipaGas main bot (Chatwoot webhook).
+  This is the translation of the /webhook endpoint in bridge.js.
+  """
+  alias PresidentialBridge.{Chatwoot, Typebot, Meta, Interceptor, Session, InactivityTimer, Mpesa}
+  alias PresidentialBridge.Config
+
+  @reset_keywords ~w(reset hi hello start menu)
+
+  def handle(event) when is_map(event) do
+    # Only process incoming user messages
+    if event["event"] != "message_created" or event["message_type"] != "incoming" do
+      :skip
+    else
+      conv_id        = get_in(event, ["conversation", "id"])
+      
+      attachments    = event["attachments"] || []
+      location_text  = Enum.find_value(attachments, "", fn att ->
+                         if att["file_type"] == "location" do
+                           lat = att["coordinates_lat"] || get_in(att, ["data_url", "coordinates_lat"])
+                           lng = att["coordinates_long"] || get_in(att, ["data_url", "coordinates_long"])
+                           url = att["data_url"] || ""
+                           cond do
+                             lat && lng -> "https://maps.google.com/?q=#{lat},#{lng}"
+                             String.contains?(url, "maps.google") -> url
+                             true -> att["fallback_title"] || ""
+                           end
+                         else
+                           nil
+                         end
+                       end)
+      
+      base_content   = event["content"] || ""
+      incoming_msg   = if location_text != "", do: location_text, else: base_content
+
+      custom_attrs   = get_in(event, ["conversation", "custom_attributes"]) || %{}
+      session_id     = custom_attrs["typebotSessionId"]
+      msg_lower      = String.downcase(String.trim(incoming_msg))
+      is_reset       = msg_lower in @reset_keywords or String.contains?(msg_lower, "main menu")
+
+      InactivityTimer.cancel(conv_id)
+
+      cond do
+        # Bot disabled, not a reset
+        custom_attrs["bot_disabled"] == "true" and not is_reset ->
+          :skip
+
+        # Agent handoff requested
+        String.contains?(msg_lower, "agent") or String.contains?(msg_lower, "speak") or
+        msg_lower == "speak_to_agent" ->
+          {:ok, phone} = Chatwoot.get_phone(conv_id)
+          Chatwoot.handoff_to_agent(conv_id, phone)
+
+        true ->
+          # Re-enable bot and clear cart if reset is sent
+          if is_reset do
+            attrs = if custom_attrs["bot_disabled"] == "true", do: %{bot_disabled: "false"}, else: %{}
+            attrs = Map.merge(attrs, %{active_cart_amount: 0, active_cart_label: "", active_cart_rids: ""})
+            Chatwoot.update_custom_attributes(conv_id, attrs)
+            Chatwoot.post_note(conv_id, "CART_TOTAL:0|")
+          end
+
+          if msg_lower in ["clear cart", "🗑️ clear cart"] do
+            attrs = %{active_cart_amount: 0, active_cart_label: "", active_cart_rids: ""}
+            Chatwoot.update_custom_attributes(conv_id, attrs)
+            Chatwoot.post_note(conv_id, "CART_TOTAL:0|")
+            case Chatwoot.get_sender(conv_id) do
+              {:ok, sender} -> Chatwoot.update_contact(sender.id, attrs)
+              _ -> :ok
+            end
+          end
+          cond do
+            msg_lower == "retry" ->
+              {:ok, phone} = Chatwoot.get_phone(conv_id)
+              payload = %{"conversationId" => conv_id, "phone" => phone, "meter" => ""}
+              Task.start(fn -> PresidentialBridge.HTTP.post_json("http://localhost:4000/trigger-mpesa", payload) end)
+              PresidentialBridge.Meta.send_text(phone, "🔄 Resending M-Pesa prompt... please check your phone.")
+
+            true ->
+              process_typebot(conv_id, incoming_msg, msg_lower, is_reset, session_id, event)
+          end
+      end
+    end
+  end
+  def handle(_), do: :skip
+
+  # ─── Process message through Typebot ─────────────────────────────────
+
+  defp process_typebot(conv_id, incoming_msg, msg_lower, is_reset, session_id, event) do
+    with {:ok, sender} <- Chatwoot.get_sender(conv_id),
+         {:ok, attrs}  <- Chatwoot.get_contact_attrs(conv_id) do
+      phone       = sender.phone
+      sender_name = sender.name
+      active_choices = Session.get_active_choices(conv_id)
+      category       = Session.get_category(conv_id)
+
+      saved_location = attrs["saved_location"] || ""
+      sanitized_location = saved_location |> String.replace("\n", " ") |> String.trim()
+      short_loc = resolve_human_location(sanitized_location)
+
+      # Update Chatwoot if contact has the old, long version saved
+      if saved_location != "" and short_loc != "" and saved_location != short_loc do
+        Task.start(fn ->
+          Chatwoot.update_contact(sender.id, %{saved_location: short_loc})
+        end)
+      end
+
+      variables_map = %{
+        "SavedLocation" => short_loc,
+        "contact_name" => sender_name,
+        "name" => sender_name,
+        "Name" => sender_name
+      }
+
+      # Chatwoot webhook strips button IDs and only sends the visual 'title'.
+      # Since we slice title to 20 chars and expand CART_TOTAL in build_and_send,
+      # we must replicate that transformation on active_choices to find what they clicked.
+      # Normalize strings by keeping only letters and numbers (ignoring emojis/punctuation) for robust matching
+      normalize = fn s -> String.replace(String.downcase(s), ~r/[^\p{L}\p{N}]/u, "") end
+
+      resolved_choice = Enum.find(active_choices, fn choice ->
+        {:ok, expanded} = PresidentialBridge.Interceptor.expand_cart_amount(choice, conv_id)
+        norm_expected = normalize.(String.slice(expanded, 0, 20))
+        norm_msg = normalize.(incoming_msg)
+        norm_expected == norm_msg or normalize.(choice) == norm_msg
+      end)
+
+      # Fuzzy fallback for location buttons if the user edited the frontend text but clicked an old button
+      resolved_choice = if is_nil(resolved_choice) and String.contains?(msg_lower, "location") do
+        Enum.find(active_choices, fn choice -> String.contains?(String.downcase(choice), "location") end)
+      else
+        resolved_choice
+      end
+
+      is_valid_choice = not is_nil(resolved_choice)
+      is_waiting_location = Session.get_waiting_location(conv_id)
+      File.write("/tmp/presidential.log", "\n---[INCOMING MSG]---\n#{incoming_msg}\nActive Choices: #{inspect(active_choices)}\nResolved: #{inspect(resolved_choice)}\nValid: #{is_valid_choice}\n", [:append])
+
+      # Determine if this is an old/stale button click
+      typebot_paths = load_typebot_paths()
+      is_old_button = Map.has_key?(typebot_paths, msg_lower) and not is_valid_choice
+      best_path     = find_best_path(typebot_paths, msg_lower, category)
+
+      # Check for invalid option
+      if session_id && active_choices != [] && not is_valid_choice &&
+         not is_reset && not is_old_button && not is_waiting_location do
+        # Trigger the injected Typebot fallback block natively
+        slug = PresidentialBridge.Typebot.get_bot_slug("default")
+        case PresidentialBridge.Typebot.start_chat(slug, %{"SystemEvent" => "INVALID_OPTION", "Phone" => format_phone(phone)}) do
+          {:ok, new_session_id, messages, input} ->
+            {combined_text, image_url} = PresidentialBridge.Typebot.parse_messages(messages, variables_map)
+            if combined_text != "" do
+              combined_text = shorten_text_locations(combined_text, saved_location, short_loc)
+              build_and_send(phone, combined_text, image_url, input, conv_id)
+              PresidentialBridge.Session.set_session(conv_id, new_session_id)
+              next_choices = PresidentialBridge.Typebot.get_active_choices(input)
+              PresidentialBridge.Session.set_active_choices(conv_id, next_choices)
+              PresidentialBridge.Chatwoot.update_custom_attributes(conv_id, %{
+                typebotSessionId: new_session_id,
+                activeChoices: Jason.encode!(next_choices)
+              })
+            end
+          _ -> :ok
+        end
+      else
+        # Determine session to use
+        effective_session = if is_reset do
+          Session.delete_session(conv_id)
+          nil
+        else
+          session_id || Session.get_session(conv_id)
+        end
+
+        # The message sent to Typebot must be the exact original case string
+        effective_msg = resolved_choice || incoming_msg
+
+        # Start or continue Typebot
+        {tb_messages, input, new_session_id} =
+          if effective_session == nil do
+            slug = Typebot.get_bot_slug(msg_lower)
+            
+            prefill = %{"Phone" => format_phone(phone), "Conversation ID" => to_string(conv_id),
+                        "contact_name" => sender_name, "name" => sender_name,
+                        "Name" => sender_name, "contact.name" => sender_name}
+
+            prefill = if short_loc != "", do: Map.put(prefill, "SavedLocation", short_loc), else: prefill
+
+            case Typebot.start_chat(slug, prefill) do
+              {:ok, new_sid, msgs, inp} ->
+                Session.set_session(conv_id, new_sid)
+                {msgs, inp} = replay_path(new_sid, best_path, msgs, inp)
+                {msgs, inp, new_sid}
+              {:error, reason} ->
+                IO.puts("[LipaGas] Typebot start error: #{inspect(reason)}")
+                {[], nil, nil}
+            end
+          else
+                case Typebot.continue_chat(effective_session, effective_msg) do
+              {:ok, msgs, inp} ->
+                {msgs, inp, effective_session}
+              {:error, :session_expired} ->
+                Session.delete_session(conv_id)
+                slug = Typebot.get_bot_slug(msg_lower)
+                
+                prefill = %{"Phone" => format_phone(phone), "Conversation ID" => to_string(conv_id),
+                            "contact_name" => sender_name, "name" => sender_name}
+
+                prefill = if short_loc != "", do: Map.put(prefill, "SavedLocation", short_loc), else: prefill
+                case Typebot.start_chat(slug, prefill) do
+                  {:ok, new_sid, msgs, inp} ->
+                    Session.set_session(conv_id, new_sid)
+                    {msgs, inp, new_sid}
+                  _ -> {[], nil, nil}
+                end
+              {:error, reason} ->
+                IO.puts("[LipaGas] Typebot continue error: #{inspect(reason)}")
+                {[], nil, effective_session}
+            end
+          end
+
+        # Scan messages for [SAVE_LOCATION:...] to resolve the race condition
+        extracted_location = Enum.find_value(tb_messages, nil, fn msg ->
+          if msg["type"] == "text" do
+            rich = get_in(msg, ["content", "richText"]) || []
+            text_content = rich
+              |> Enum.map_join("\n", fn rt ->
+                   (is_map(rt) && rt["children"] || [])
+                   |> Enum.map_join("", fn c -> c["text"] || "" end)
+                 end)
+            case Regex.run(~r/\[SAVE_LOCATION:([^\]]+)\]/, text_content) do
+              [_, loc] -> String.trim(loc)
+              _ -> nil
+            end
+          else
+            nil
+          end
+        end)
+
+        # Update short_loc and variables_map if a new location was just set
+        {short_loc, variables_map} = if extracted_location && extracted_location != "" do
+          new_short = resolve_human_location(extracted_location)
+          Task.start(fn ->
+            Chatwoot.update_contact(sender.id, %{saved_location: new_short})
+          end)
+          {new_short, Map.put(variables_map, "SavedLocation", new_short)}
+        else
+          {short_loc, variables_map}
+        end
+
+        {combined_text, image_url} = Typebot.parse_messages(tb_messages, variables_map)
+
+        # Ensure any persistent long location values inside the text are dynamically shortened
+        combined_text = shorten_text_locations(combined_text, saved_location, short_loc)
+
+        # Run interceptors
+        {final_text, intercepted} = run_interceptors(combined_text, phone, image_url, conv_id, msg_lower)
+
+        if not intercepted do
+          build_and_send(phone, final_text, image_url, input, conv_id)
+        end
+
+        if is_waiting_location do
+          Session.set_waiting_location(conv_id, false)
+        end
+
+        # Save state
+        next_choices = if is_waiting_location or String.contains?(combined_text, "[LOCATION_PROMPT]") do
+          []
+        else
+          case Typebot.get_active_choices(input) do
+            []    -> Session.get_active_choices(conv_id)
+            fresh -> fresh
+          end
+        end
+        new_category = update_category(category, best_path)
+        Session.set_active_choices(conv_id, next_choices)
+        Session.set_category(conv_id, new_category)
+        if new_session_id do
+          Chatwoot.update_custom_attributes(conv_id, %{
+            typebotSessionId: new_session_id,
+            activeChoices:    Jason.encode!(next_choices),
+            category:         new_category
+          })
+        end
+      end
+
+        # Schedule inactivity timer
+        InactivityTimer.schedule(conv_id, phone)
+    else
+      err ->
+        IO.puts("[LipaGas] Failed to get sender: #{inspect(err)}")
+    end
+  end
+
+  # ─── Run all interceptors in sequence ────────────────────────────────
+
+  defp run_interceptors(text, phone, image_url, conv_id, msg_lower) do
+    text = Interceptor.strip_stk_push_status(text)
+
+    case Interceptor.process(text, phone, image_url, conv_id) do
+      {:intercepted, _} ->
+        {text, true}
+
+      {:passthrough, cleaned} ->
+        # Expand CART_TOTAL
+        {:ok, expanded} = Interceptor.expand_cart_total(cleaned, conv_id)
+
+        # Check SHOW_FLOW
+        case Interceptor.build_flow_payload(expanded, phone) do
+          {:ok, flow_payload} ->
+            Meta.send_message(flow_payload)
+            {expanded, true}
+
+          :not_matched ->
+            # Check SHOW_CATALOG
+            case Interceptor.build_catalog_payload(expanded, phone, msg_lower) do
+              {:ok, {:catalog, p, cat_id, set_id, body_text}} ->
+                Meta.send_catalog(p, cat_id, set_id, body_text)
+                {expanded, true}
+              _ ->
+                {expanded, false}
+            end
+        end
+    end
+  end
+
+  # ─── Build and send the appropriate WhatsApp message ─────────────────
+
+  def build_and_send(phone, text, image_url, input, conv_id) do
+    clean = Regex.replace(~r/SHOW_CATALOG:\s*\w+/, text, "") |> String.trim()
+
+    {final_clean, footer_text} = case Regex.run(~r/\[FOOTER:\s*([^\]]+)\]/i, clean) do
+      [full_match, footer] ->
+        {String.replace(clean, full_match, "") |> String.trim(), String.trim(footer)}
+      nil ->
+        {clean, nil}
+    end
+
+    {final_clean, inline_buttons} = case Regex.run(~r/\[BUTTONS:\s*([^\]]+)\]/i, final_clean) do
+      [full_match, btns] ->
+        button_list = String.split(btns, "|") |> Enum.map(&String.trim/1)
+        {String.replace(final_clean, full_match, "") |> String.trim(), button_list}
+      nil ->
+        {final_clean, []}
+    end
+
+    input_choices = if is_map(input) && input["type"] == "choice input" do
+      input["items"] || []
+    else
+      []
+    end
+
+    all_choices = input_choices ++ Enum.map(inline_buttons, fn btn -> %{"content" => btn} end)
+
+    payload =
+      cond do
+        length(all_choices) > 0 ->
+          buttons = all_choices
+            |> Enum.take(3)
+            |> Enum.map(fn item ->
+              raw_title = (is_map(item) && item["content"]) || ""
+              {:ok, expanded_title} = Interceptor.expand_cart_amount(raw_title, conv_id)
+              # id = original full content so Typebot continue_chat routes correctly
+              # title = expanded human-readable text the user sees on WhatsApp
+              id    = raw_title
+              title = String.slice(expanded_title, 0, 20)
+              %{type: "reply", reply: %{id: id, title: title}}
+            end)
+          interactive = %{type: "button", body: %{text: final_clean || "Please choose:"}, action: %{buttons: buttons}}
+          interactive = if footer_text, do: Map.put(interactive, :footer, %{text: footer_text}), else: interactive
+          interactive = if image_url, do: Map.put(interactive, :header, %{type: "image", image: %{link: image_url}}), else: interactive
+          %{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}
+
+        final_clean != "" ->
+          %{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: final_clean}}
+
+        true -> nil
+      end
+
+    if payload, do: Meta.send_message(payload)
+  end
+
+
+
+  # ─── Helper: replay path for direct button navigation ────────────────
+
+  defp replay_path(_session_id, nil, msgs, input), do: {msgs, input}
+  defp replay_path(_session_id, [], msgs, input), do: {msgs, input}
+  defp replay_path(session_id, path, _msgs, _input) do
+    Enum.reduce(path, {[], nil}, fn step, _acc ->
+      case Typebot.continue_chat(session_id, step) do
+        {:ok, msgs, inp} -> {msgs, inp}
+        _                -> {[], nil}
+      end
+    end)
+  end
+
+  def resolve_human_location(location) when is_binary(location) do
+    cond do
+      location == "" ->
+        ""
+
+      String.contains?(location, " - Map: ") ->
+        base_name = location |> String.split(" - Map: ") |> List.first() |> String.trim()
+        shorten_comma_string(base_name)
+
+      String.starts_with?(location, "http") and String.contains?(location, "maps.google.com") ->
+        case Regex.run(~r/q=(-?\d+\.\d+),(-?\d+\.\d+)/, location) do
+          [_, lat, lng] ->
+            url = "https://nominatim.openstreetmap.org/reverse?format=json&lat=#{lat}&lon=#{lng}"
+            headers = [{"User-Agent", "presidential-bot/1.0"}]
+            case PresidentialBridge.HTTP.get(url, headers) do
+              {:ok, %{status: 200, body: resp}} ->
+                resp_map = if is_binary(resp), do: Jason.decode!(resp), else: resp
+                
+                address = resp_map["address"] || %{}
+                parts = [
+                  resp_map["name"],
+                  address["road"],
+                  address["neighbourhood"],
+                  address["suburb"] || address["city_district"],
+                  address["city"] || address["town"] || address["village"]
+                ]
+                |> Enum.reject(&(&1 == nil or &1 == ""))
+                |> Enum.uniq()
+                |> Enum.take(3)
+                
+                if length(parts) > 0 do
+                  Enum.join(parts, ", ")
+                else
+                  shorten_comma_string(resp_map["display_name"] || location)
+                end
+              _ ->
+                "Lat: #{lat}, Lng: #{lng}"
+            end
+          _ ->
+            location
+        end
+
+      true ->
+        shorten_comma_string(location)
+    end
+  end
+  def resolve_human_location(_), do: ""
+
+  defp shorten_comma_string(str) do
+    parts = str |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    if length(parts) > 2 do
+      parts |> Enum.take(2) |> Enum.join(", ")
+    else
+      str
+    end
+  end
+
+  def shorten_text_locations(text, saved_location, short_loc) when is_binary(text) do
+    text = if saved_location != "" and short_loc != "" and saved_location != short_loc do
+      sanitized_location = saved_location |> String.replace("\n", " ") |> String.trim()
+      text
+      |> String.replace(saved_location, short_loc)
+      |> String.replace(sanitized_location, short_loc)
+    else
+      text
+    end
+
+    regex = ~r/[^,!?\n\(\)]+(?:,\s*[^,!?\n\(\)]+){2,}/u
+    Regex.replace(regex, text, fn match ->
+      lower_match = String.downcase(match)
+      is_location = String.contains?(lower_match, ["sublocation", "location", "division", "kenya", "road", "drive", "street", "clinic", "estate"])
+      
+      if is_location do
+        parts = match |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+        if length(parts) > 2 do
+          parts |> Enum.take(2) |> Enum.join(", ")
+        else
+          match
+        end
+      else
+        match
+      end
+    end)
+  end
+
+  # ─── Load Typebot path map from Docker Postgres ───────────────────────
+
+  defp load_typebot_paths do
+    case File.read("/root/presidential_bridge/paths.json") do
+      {:ok, body} ->
+        case Jason.decode(body) do
+          {:ok, paths} -> paths
+          _ -> %{}
+        end
+      _ -> %{}
+    end
+  end
+
+  defp find_best_path(paths, msg, _category) do
+    # msg is already trimmed and downcased
+    Map.get(paths, msg)
+  end
+
+  defp update_category(current, nil), do: current
+  defp update_category(_current, []), do: ""
+  defp update_category(_current, [first | _]) do
+    lower = String.downcase(first)
+    cond do
+      String.contains?(lower, "business") -> "business"
+      String.contains?(lower, "gas")      -> "retail"
+      String.contains?(lower, "token")    -> "tokens"
+      true                                -> ""
+    end
+  end
+  defp format_phone("254" <> rest) when byte_size(rest) == 9, do: "0" <> rest
+  defp format_phone(phone), do: phone
+end

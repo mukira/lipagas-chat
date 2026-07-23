@@ -9,7 +9,7 @@ defmodule LipagasBridge.TypebotBotHandler do
   alias LipagasBridge.{Typebot, Session, HTTP}
 
   @graph_base "https://graph.facebook.com/v21.0"
-  @reset_keywords ~w(reset hi hello start menu back ruto exit)
+  @reset_keywords ~w(reset hi hello start menu back)
 
   # ─── Inbox → Meta credentials map ────────────────────────────────────
   # Add one entry per WhatsApp inbox that has a bot assigned.
@@ -46,46 +46,17 @@ defmodule LipagasBridge.TypebotBotHandler do
 
     IO.puts("[TypebotBotHandler] conv_id=#{conv_id} inbox=#{inbox_id} phone=#{phone} msg=#{inspect(content)}")
 
-    button_mapping = build_dynamic_button_mapping(slug)
-    matched_btn = Map.get(button_mapping, msg_lower)
-    is_deep_switch = not is_nil(matched_btn)
-
-    # Reset session on keywords or deep switch
-    if msg_lower in @reset_keywords or is_deep_switch do
-      if msg_lower == "exit" do
-        IO.puts("[TypebotBotHandler] Exit keyword received — clearing greeting cache for conv #{conv_id}")
-        Session.delete_greeting(conv_id)
-      end
-      IO.puts("[TypebotBotHandler] Reset keyword or deep switch — clearing session for conv #{conv_id}")
+    # Reset session on keywords
+    if msg_lower in @reset_keywords do
+      IO.puts("[TypebotBotHandler] Reset keyword — clearing session for conv #{conv_id}")
       Session.delete_session(conv_id)
     end
 
     session_id = Session.get_session(conv_id)
 
     {messages, input} =
-      if is_nil(session_id) or msg_lower in @reset_keywords or is_deep_switch do
-        {first_msgs, first_input, new_session_id} = start_new_session(conv_id, slug, payload)
-        
-        if is_deep_switch and new_session_id do
-          [lang_str, topic_str] = matched_btn
-          IO.puts("[TypebotBotHandler] Fast-forwarding deep switch: lang=#{lang_str} topic=#{inspect(topic_str)}")
-          
-          case Typebot.continue_chat(new_session_id, lang_str) do
-            {:ok, lang_msgs, lang_input} ->
-              if topic_str do
-                case Typebot.continue_chat(new_session_id, topic_str) do
-                  {:ok, topic_msgs, topic_input} -> {topic_msgs, topic_input}
-                  _ -> {lang_msgs, lang_input}
-                end
-              else
-                {lang_msgs, lang_input}
-              end
-            _ ->
-              {first_msgs, first_input}
-          end
-        else
-          {first_msgs, first_input}
-        end
+      if is_nil(session_id) or msg_lower in @reset_keywords do
+        start_new_session(conv_id, slug, payload)
       else
         continue_session(conv_id, session_id, slug, content, payload)
       end
@@ -122,35 +93,19 @@ defmodule LipagasBridge.TypebotBotHandler do
         _ -> "No latest news."
       end
 
-    display_name = if user_name && String.trim(user_name) != "", do: user_name, else: "Mwananchi"
-
-    greeting_index = Session.get_greeting(conv_id)
-    greeting_index = if is_nil(greeting_index) do
-      new_idx = Enum.random(1..5)
-      Session.set_greeting(conv_id, Integer.to_string(new_idx))
-      new_idx
-    else
-      case Integer.parse(to_string(greeting_index)) do
-        {idx, _} -> idx
-        :error -> Enum.random(1..5)
-      end
-    end
-
     prefilled_vars = %{
       "user_name" => user_name,
       "phone_number" => phone,
-      "latest_news" => latest_news,
-      "greeting_index" => greeting_index
+      "latest_news" => latest_news
     }
-    IO.puts("[TypebotBotHandler] prefilled_vars: #{inspect(prefilled_vars)}")
 
     case Typebot.start_chat(slug, prefilled_vars) do
       {:ok, session_id, messages, input} ->
         Session.set_session(conv_id, session_id)
-        {messages, input, session_id}
+        {messages, input}
       {:error, reason} ->
         IO.puts("[TypebotBotHandler] start_chat failed: #{inspect(reason)}")
-        {[], nil, nil}
+        {[], nil}
     end
   end
 
@@ -163,8 +118,7 @@ defmodule LipagasBridge.TypebotBotHandler do
       {:error, :session_expired} ->
         IO.puts("[TypebotBotHandler] Session expired for conv #{conv_id}, restarting")
         Session.delete_session(conv_id)
-        {msgs, inp, _id} = start_new_session(conv_id, slug, payload)
-        {msgs, inp}
+        start_new_session(conv_id, slug, payload)
       {:error, reason} ->
         IO.puts("[TypebotBotHandler] continue_chat failed: #{inspect(reason)}")
         {[], nil}
@@ -278,44 +232,6 @@ defmodule LipagasBridge.TypebotBotHandler do
         IO.puts("[TypebotBotHandler] Meta API error: #{resp.status} — #{inspect(resp.body)}")
       {:error, e} ->
         IO.puts("[TypebotBotHandler] HTTP error: #{inspect(e)}")
-    end
-  end
-
-  # ─── Dynamic Button Mapping (Ghost Simulator) ──────────────────────────
-
-  defp build_dynamic_button_mapping(slug) do
-    cached = Session.get_button_mapping(slug)
-    if cached do
-      cached
-    else
-      IO.puts("[TypebotBotHandler] Ghost Simulation: Building dynamic button mapping for #{slug}")
-      mapping = %{}
-      case Typebot.start_chat(slug, %{}) do
-        {:ok, _session_id, _messages, input} ->
-          langs = Typebot.get_active_choices(input)
-          mapping = Enum.reduce(langs, mapping, fn lang, acc ->
-            Map.put(acc, String.downcase(lang), [lang, nil])
-          end)
-          
-          mapping = Enum.reduce(langs, mapping, fn lang, acc ->
-            case Typebot.start_chat(slug, %{}) do
-              {:ok, sid, _, _} ->
-                case Typebot.continue_chat(sid, lang) do
-                  {:ok, _, topic_input} ->
-                    topics = Typebot.get_active_choices(topic_input)
-                    Enum.reduce(topics, acc, fn topic, inner_acc ->
-                      Map.put(inner_acc, String.downcase(topic), [lang, topic])
-                    end)
-                  _ -> acc
-                end
-              _ -> acc
-            end
-          end)
-          Session.set_button_mapping(slug, mapping)
-          mapping
-        _ ->
-          %{}
-      end
     end
   end
 end

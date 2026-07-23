@@ -6,7 +6,7 @@ def cuid(prefix="cuid"):
     return (prefix + uid)[:25].ljust(25, "0")
 
 bot_state_path = "/home/mukira/.gemini/antigravity-ide/brain/865b4881-80e4-4340-aa9f-6a45f7df5e0e/scratch/bot_state_formatted.json"
-output_sql_path = "/home/mukira/lipagas-chat/presidential_bridge/restore_bot.sql"
+output_sql_path = "/home/mukira/presidential-chat/presidential_bridge/restore_bot.sql"
 
 with open(bot_state_path, "r") as f:
     typebot = json.load(f)

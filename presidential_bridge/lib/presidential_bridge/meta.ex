@@ -1,0 +1,137 @@
+defmodule PresidentialBridge.Meta do
+  @moduledoc "WhatsApp Meta Graph API client using PresidentialBridge.HTTP"
+  alias PresidentialBridge.{Config, HTTP}
+
+  @graph_base "https://graph.facebook.com/v21.0"
+
+  defp auth(token), do: {"Authorization", "Bearer #{token}"}
+
+  def send_message(payload) do
+    IO.puts("[Meta.send_message] Sending payload: #{Jason.encode!(payload)}")
+    result = HTTP.post_json("#{@graph_base}/#{Config.phone_id()}/messages", payload,
+      [auth(Config.meta_token())])
+    IO.puts("[Meta.send_message] Response: #{inspect(result)}")
+    result
+  end
+
+  def send_joywo_message(payload) do
+    HTTP.post_json("#{@graph_base}/#{Config.joywo_phone_id()}/messages", payload,
+      [auth(Config.joywo_meta_token())])
+  end
+
+  def send_text(phone, body) do
+    send_message(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: body}})
+  end
+
+  def send_document(phone, url, filename) do
+    send_message(%{
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "document",
+      document: %{link: url, filename: filename}
+    })
+  end
+
+  def upload_media(filepath, mime_type \\ "application/pdf") do
+    url = "#{@graph_base}/#{Config.phone_id()}/media"
+    {resp, 0} = System.cmd("curl", [
+      "-s", "-X", "POST", url,
+      "-H", "Authorization: Bearer #{Config.meta_token()}",
+      "-F", "file=@#{filepath};type=#{mime_type}",
+      "-F", "type=#{mime_type}",
+      "-F", "messaging_product=whatsapp"
+    ])
+    
+    case Jason.decode(resp) do
+      {:ok, %{"id" => media_id}} -> {:ok, media_id}
+      err -> {:error, err}
+    end
+  end
+
+  def send_document_by_id(phone, media_id, filename) do
+    send_message(%{
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "document",
+      document: %{id: media_id, filename: filename}
+    })
+  end
+
+  def send_joywo_text(phone, body) do
+    send_joywo_message(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: body}})
+  end
+
+  def send_buttons(phone, body_text, buttons, image_url \\ nil) do
+    interactive = %{type: "button", body: %{text: body_text}, action: %{buttons: buttons}}
+    interactive = if image_url, do: Map.put(interactive, :header, %{type: "image", image: %{link: image_url}}), else: interactive
+    send_message(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive})
+  end
+
+  def send_catalog(phone, catalog_id, product_set_id, raw_body_text) do
+    {body_text, footer_text} = case Regex.run(~r/\[FOOTER:\s*([^\]]+)\]/i, raw_body_text) do
+      [full_match, footer] ->
+        {String.replace(raw_body_text, full_match, "") |> String.trim(), String.trim(footer)}
+      nil ->
+        {raw_body_text, "Tap button below to select"}
+    end
+
+    url = "#{@graph_base}/#{product_set_id}/products?fields=retailer_id,price&limit=50"
+    with {:ok, %{status: 200, body: raw_body}} <- HTTP.get(url, [auth(Config.meta_token())]) do
+      resp_body = if is_binary(raw_body), do: Jason.decode!(raw_body), else: raw_body
+      items =
+        (is_map(resp_body) && resp_body["data"] || [])
+        |> Enum.map(fn i -> %{retailer_id: i["retailer_id"], price: parse_price(i["price"])} end)
+        |> Enum.sort_by(& &1.price)
+        |> Enum.map(&%{product_retailer_id: &1.retailer_id})
+
+      payload = %{
+        messaging_product: "whatsapp", to: phone, type: "interactive",
+        interactive: %{
+          type: "product_list",
+          header: %{type: "text", text: "LipaGas Store"},
+          body: %{text: body_text},
+          footer: %{text: footer_text},
+          action: %{catalog_id: catalog_id, sections: [%{title: "Available Brands", product_items: items}]}
+        }
+      }
+      send_message(payload)
+    else
+      _ -> send_text(phone, "⚠️ Could not load catalog right now. Please try again shortly.")
+    end
+  end
+
+  def send_joywo_catalog(phone, product_set_id, _body_text) do
+    url = "#{@graph_base}/#{product_set_id}/products?fields=retailer_id,price&limit=50"
+    with {:ok, %{status: 200, body: raw_body}} <- HTTP.get(url, [auth(Config.joywo_meta_token())]) do
+      resp_body = if is_binary(raw_body), do: Jason.decode!(raw_body), else: raw_body
+      items = (is_map(resp_body) && resp_body["data"] || []) |> Enum.map(&%{product_retailer_id: &1["retailer_id"]})
+      if items == [] do
+        send_joywo_text(phone, "No products found in this category yet. Please check back soon!")
+      else
+        payload = %{
+          messaging_product: "whatsapp", to: phone, type: "interactive",
+          interactive: %{
+            type: "product_list",
+            header: %{type: "text", text: "JoyWO Store"},
+            body: %{text: "Browse and tap any product to view details and purchase:"},
+            footer: %{text: "JoyWO Empowerment"},
+            action: %{catalog_id: Config.joywo_catalog_id(), sections: [%{title: "Available Products", product_items: items}]}
+          }
+        }
+        send_joywo_message(payload)
+      end
+    else
+      _ -> send_joywo_text(phone, "⚠️ Could not load catalog right now. Please try again shortly.")
+    end
+  end
+
+  defp parse_price(nil), do: 0.0
+  defp parse_price(price) do
+    case Regex.run(~r/[\d,]+(\.\d+)?/, to_string(price)) do
+      [match | _] -> match |> String.replace(",", "") |> Float.parse() |> elem(0)
+      _ -> 0.0
+    end
+  rescue
+    _ -> 0.0
+  end
+end

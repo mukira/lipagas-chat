@@ -1,0 +1,339 @@
+{
+  "i need gas 🔥": {
+    "retail": [
+      "I need Gas 🔥"
+    ],
+    "default": [
+      "I need Gas 🔥"
+    ]
+  },
+  "for business 🏢": {
+    "business": [
+      "For Business 🏢"
+    ],
+    "default": [
+      "For Business 🏢"
+    ]
+  },
+  "i need installation": {
+    "default": [
+      "I need Installation"
+    ]
+  },
+  "quick refill ⚡": {
+    "retail": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "Quick Refill ⚡"
+    ]
+  },
+  "new cylinder ✨": {
+    "retail": [
+      "I need Gas 🔥",
+      "New Cylinder ✨"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "New Cylinder ✨"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "New Cylinder ✨"
+    ]
+  },
+  "buy gas tokens 📲": {
+    "retail": [
+      "I need Gas 🔥",
+      "Buy Gas Tokens 📲 "
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Buy Gas Tokens 📲 "
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "Buy Gas Tokens 📲 "
+    ]
+  },
+  "cylinders 🔢": {
+    "business": [
+      "For Business 🏢",
+      "Cylinders 🔢"
+    ],
+    "default": [
+      "For Business 🏢",
+      "Cylinders 🔢"
+    ]
+  },
+  "🚛 bulk tanker": {
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker"
+    ],
+    "default": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker"
+    ]
+  },
+  "payg registration": {
+    "default": [
+      "I need Installation",
+      "PAYG Registration"
+    ]
+  },
+  "6 kg refill": {
+    "retail": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "6 KG Refill"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "6 KG Refill"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "Quick Refill ⚡",
+      "6 KG Refill"
+    ]
+  },
+  "13 kg refill": {
+    "retail": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "13 KG Refill"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "13 KG Refill"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "Quick Refill ⚡",
+      "13 KG Refill"
+    ]
+  },
+  "50 kg refill": {
+    "retail": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "50 KG Refill"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "50 KG Refill"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "Quick Refill ⚡",
+      "50 KG Refill"
+    ]
+  },
+  "6 kg new": {
+    "retail": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "6 KG New"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "6 KG New"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "New Cylinder ✨",
+      "6 KG New"
+    ]
+  },
+  "13 kg new": {
+    "retail": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "13 KG New"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "13 KG New"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "New Cylinder ✨",
+      "13 KG New"
+    ]
+  },
+  "50 kg new": {
+    "retail": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "50 KG New"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "New Cylinder ✨",
+      "50 KG New"
+    ],
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "🛒 Add Another Item",
+      "New Cylinder ✨",
+      "50 KG New"
+    ]
+  },
+  "just a refill": {
+    "business": [
+      "For Business 🏢",
+      "Cylinders 🔢",
+      "Just a Refill"
+    ],
+    "default": [
+      "For Business 🏢",
+      "Cylinders 🔢",
+      "Just a Refill"
+    ]
+  },
+  "new cylinder": {
+    "business": [
+      "For Business 🏢",
+      "Cylinders 🔢",
+      "New Cylinder"
+    ],
+    "default": [
+      "For Business 🏢",
+      "Cylinders 🔢",
+      "New Cylinder"
+    ]
+  },
+  "500 kg": {
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG"
+    ],
+    "default": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG"
+    ]
+  },
+  "1000 kg": {
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "1000 KG"
+    ],
+    "default": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "1000 KG"
+    ]
+  },
+  "select brand": {
+    "retail": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "6 KG Refill",
+      "Select Brand"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Quick Refill ⚡",
+      "6 KG Refill",
+      "Select Brand"
+    ],
+    "business": [
+      "For Business 🏢",
+      "Cylinders 🔢",
+      "Just a Refill",
+      "Select Brand"
+    ]
+  },
+  "pay kes [cart_total:{{amount}}]": {
+    "business": [
+      "For Business 🏢",
+      "🚛 Bulk Tanker",
+      "500 KG",
+      "Pay KES [CART_TOTAL:{{Amount}}]"
+    ],
+    "default": [
+      "I need Gas 🔥",
+      "Buy Gas Tokens 📲 ",
+      "Pay KES [CART_TOTAL:{{Amount}}]"
+    ],
+    "retail": [
+      "I need Gas 🔥",
+      "Buy Gas Tokens 📲 ",
+      "Pay KES [CART_TOTAL:{{Amount}}]"
+    ]
+  },
+  "🛒 add another item": {
+    "retail": [
+      "I need Gas 🔥"
+    ],
+    "default": [
+      "I need Gas 🔥"
+    ],
+    "business": [
+      "For Business 🏢"
+    ]
+  },
+  "🗑🗑️ clear cart": {
+    "retail": [
+      "I need Gas 🔥"
+    ],
+    "default": [
+      "I need Gas 🔥"
+    ],
+    "business": [
+      "For Business 🏢"
+    ]
+  },
+  "🗑️ clear cart": {
+    "retail": [
+      "I need Gas 🔥"
+    ],
+    "default": [
+      "I need Gas 🔥"
+    ],
+    "business": [
+      "For Business 🏢"
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+defmodule PresidentialBridge.Mpesa do
+  @moduledoc "M-Pesa Daraja API using PresidentialBridge.HTTP"
+  alias PresidentialBridge.{Config, HTTP}
+
+  @daraja_base "https://api.safaricom.co.ke"
+
+  def get_access_token do
+    url = "#{@daraja_base}/oauth/v1/generate?grant_type=client_credentials"
+    case HTTP.get(url, [{"Authorization", "Basic #{Config.mpesa_auth_key()}"}]) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body["access_token"]}
+      {:ok, resp} -> {:error, "Daraja auth #{resp.status}"}
+      {:error, e} -> {:error, e}
+    end
+  end
+
+  def fire_stk_push(phone_raw, amount, account_ref, description) do
+    formatted = format_phone(phone_raw)
+    with {:ok, token} <- get_access_token(),
+         {timestamp, pwd} <- generate_password() do
+      payload = %{
+        "BusinessShortCode" => Config.mpesa_shortcode(),
+        "Password"          => pwd,
+        "Timestamp"         => timestamp,
+        "TransactionType"   => "CustomerPayBillOnline",
+        "Amount"            => to_string(ceil(amount)),
+        "PartyA"            => formatted,
+        "PartyB"            => Config.mpesa_shortcode(),
+        "PhoneNumber"       => formatted,
+        "CallBackURL"       => Config.mpesa_callback_url(),
+        "AccountReference"  => account_ref,
+        "TransactionDesc"   => description
+      }
+      case HTTP.post_json("#{@daraja_base}/mpesa/stkpush/v1/processrequest", payload,
+        [{"Authorization", "Bearer #{token}"}]) do
+        {:ok, %{status: 200, body: body}} -> {:ok, body}
+        {:ok, resp} -> {:error, "STK #{resp.status}: #{inspect(resp.body)}"}
+        {:error, e} -> {:error, e}
+      end
+    end
+  end
+
+  def format_phone(phone) do
+    digits = String.replace(to_string(phone), ~r/[^\d]/, "")
+    "254#{String.slice(digits, -9, 9)}"
+  end
+
+  def generate_password do
+    timestamp = DateTime.utc_now() |> Calendar.strftime("%Y%m%d%H%M%S")
+    raw = Config.mpesa_shortcode() <> Config.mpesa_passkey() <> timestamp
+    {timestamp, Base.encode64(raw)}
+  end
+
+  def generate_receipt(prefix \\ "LPG") do
+    "#{prefix}#{System.system_time(:millisecond) |> to_string() |> String.slice(-6, 6)}"
+  end
+end

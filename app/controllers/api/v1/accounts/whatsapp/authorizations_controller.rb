@@ -57,7 +57,7 @@ class Api::V1::Accounts::Whatsapp::AuthorizationsController < Api::V1::Accounts:
 
   def render_error_response(error)
     Rails.logger.error "[WHATSAPP AUTHORIZATION] Embedded signup error: #{error.message}"
-    Rails.logger.error error.backtrace.join("\n")
+    Rails.logger.error error.backtrace&.join("\n")
     render json: {
       success: false,
       error: error.message

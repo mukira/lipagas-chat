@@ -39,7 +39,7 @@ class Whatsapp::ChannelCreationService
   end
 
   def build_channel
-    Channel::Whatsapp.build(
+    Channel::Whatsapp.new(
       account: @account,
       phone_number: @phone_info[:phone_number],
       provider: 'whatsapp_cloud',

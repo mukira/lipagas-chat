@@ -80,7 +80,8 @@ When working in this directory (`/root/lipagas_bot`), all agents and developers 
 ### Rule 56: No Guessing or Trial-and-Error
 Never guess a solution, bullshit, or use trial and error. Always perform a full code audit end-to-end. You must provide a solution that fixes things 100% absolutely. No half-assed work.
 
-## 19. Typebot Safe Coordinate Rule
-When programmatically injecting new Typebot groups or blocks, DO NOT hardcode static `graphCoordinates` or place them randomly. Always read the coordinates of the adjacent group and dynamically apply a minimum offset (e.g., `x + 400`, `y + (index * 200)`) to ensure new blocks never overlap existing ones.
+## 19. Typebot Safe Coordinate Rule & Layout Preservation
+- **Preserve Existing Layouts**: If a bot has already been spaced out or manually arranged, DO NOT run auto-layout scripts or overwrite existing `graphCoordinates` for the whole bot without explicit permission. Leave the rest of the bot exactly as the user arranged it.
+- **Safe Programmatic Injections**: When injecting new Typebot groups or blocks, DO NOT hardcode static `graphCoordinates` or place them randomly. Always read the coordinates of the adjacent group and dynamically apply a minimum offset (e.g., `x + 400`, `y + (index * 200)`) to ensure new blocks never overlap existing ones, while seamlessly blending into the user's existing spacing.
 
 
