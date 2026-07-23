@@ -155,6 +155,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
       end
 
       send_whatsapp_response(phone, meta, messages, input, conv_id)
+      end
     end
   rescue
     e ->
