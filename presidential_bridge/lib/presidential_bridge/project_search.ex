@@ -49,14 +49,17 @@ defmodule PresidentialBridge.ProjectSearch do
   defp run_serper(query) do
     url = "https://google.serper.dev/search"
     headers = [
-      {"X-API-KEY", @serper_api_key},
-      {"Content-Type", "application/json"}
+      {"X-API-KEY", @serper_api_key}
     ]
-    body = Jason.encode!(%{q: query, gl: "ke"})
+    body_map = %{q: query, gl: "ke"}
 
-    case HTTPoison.post(url, body, headers, timeout: 5000, recv_timeout: 5000) do
-      {:ok, %{status_code: 200, body: resp_body}} ->
-        resp_body
+    case PresidentialBridge.HTTP.post_json(url, body_map, headers) do
+      {:ok, %{status: 200, body: resp_body}} ->
+        if is_map(resp_body) or is_list(resp_body) do
+          Jason.encode!(resp_body)
+        else
+          resp_body
+        end
       _ ->
         "{}"
     end
