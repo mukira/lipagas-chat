@@ -1,0 +1,4250 @@
+[
+  {
+    "id": "cmrulouid00011eqdgrp00001",
+    "title": "Presidential AI",
+    "blocks": [
+      {
+        "id": "cmrulouid00011eqdblk00001",
+        "type": "webhook",
+        "options": {
+          "responseVariableMapping": [
+            {
+              "id": "cmrulouid00011eqdmap00001",
+              "bodyPath": "reply",
+              "variableId": "cmrulouid00011eqdvar00002"
+            }
+          ]
+        }
+      },
+      {
+        "id": "cmrulouid00011eqdblk00002",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "cmrulouid00011eqdrich0001",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{Reply}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "cmrulouid00011eqdblk00003",
+        "type": "text input",
+        "options": {
+          "labels": {
+            "button": "Send",
+            "placeholder": "Type your message..."
+          },
+          "variableId": "cmrulouid00011eqdvar00001"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_sb_prjf4fd1f28808f437",
+    "title": "Projects Submenu",
+    "blocks": [
+      {
+        "id": "blk_sub_prje74dceff075442",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_sp_1fb44f73b442047a79",
+            "content": "📍 County Projects",
+            "outgoingEdgeId": "edg_sp_12616878dabc843ce8"
+          },
+          {
+            "id": "itm_sp_2bdf9221c509e44eaa",
+            "content": "🏠 Infrastructure",
+            "outgoingEdgeId": "edg_sp_2a4fa9b88ae92433eb"
+          },
+          {
+            "id": "itm_sp_31409fc63a73043d58",
+            "content": "🌱 Agriculture",
+            "outgoingEdgeId": "edg_sp_32ef39e15ecb345429"
+          },
+          {
+            "id": "itm_sp_4dc60c3e321dd4110b",
+            "content": "🔌 Energy & Roads",
+            "outgoingEdgeId": "edg_sp_4c0be6ae4d9734294a"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 0,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_sb_eco734955b6f2a2456",
+    "title": "Economy Submenu",
+    "blocks": [
+      {
+        "id": "blk_sub_eco4b11143735554a",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_se_1829067124a7140c29",
+            "content": "💼 Hustler Support",
+            "outgoingEdgeId": "edg_se_1849fb1aebfba44bba"
+          },
+          {
+            "id": "itm_se_2815340d322754226b",
+            "content": "💻 Youth & Digital",
+            "outgoingEdgeId": "edg_se_20ab3babd389c45729"
+          },
+          {
+            "id": "itm_se_3c5483d42e5f04c92b",
+            "content": "📊 BETA Policies",
+            "outgoingEdgeId": "edg_se_3342a2a324198418b9"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 0,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_ask9d5c99ed0bfd456683",
+    "title": "Ask Question",
+    "blocks": [
+      {
+        "id": "blk_ask_txt24d78aa07a9445",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_170e371f6c1e422dadeb223",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Go ahead, type your question and I'll get you a verified answer. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 0,
+      "y": 600
+    }
+  },
+  {
+    "id": "grp_grt_3943e608c6a94010867d",
+    "title": "English Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_ca4b17bd8c484d349e0f",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_b2bd52eabaf64a0994db",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu {{user_name}}, my friend. Let's get to it, what would you like to explore today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_b908321c48c14d6c8afb",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_8e6e3f77f46b4225836e",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_5cf3254f23634c8f8fb1"
+          },
+          {
+            "id": "itm_m_568e229f5711431c8eda",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_f79e90b73b5340bd9439"
+          },
+          {
+            "id": "itm_m_a9ecee57f2e34113b48c",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_9fdab87c265d49a2940e"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_95b7394906bd4e5c9feb",
+    "title": "English Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_be51ecb1397b403c8778",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_aa4ea31fe07447e39f1c",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Hello {{user_name}}, my friend. Welcome, ready to take action together?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_253c0e2978084fa9833b",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_22aca0eb8a6e4ed69923",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_9eb24367dfbb4aff9c65"
+          },
+          {
+            "id": "itm_m_347f6c9dfe6d43b9b7be",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_bfdda44b662a44cd9ad1"
+          },
+          {
+            "id": "itm_m_f1fd56f1d27a40ef83db",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_73b1dee9e1514bc7987f"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_grt_6e8ffa1352984eec987d",
+    "title": "English Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_533f1ba02e3c46109b8b",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_510ba2c5255745aaaef1",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Welcome {{user_name}}, my friend. I'm glad you're here, what's on your mind today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_6a03dff23683460d93d8",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_71d552573e3b4bcdb2e8",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_c63d7c8a24f84d0facf8"
+          },
+          {
+            "id": "itm_m_9b6856b711774c988fbd",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_2c0695e683f64f38aa89"
+          },
+          {
+            "id": "itm_m_73aa3b634b0b4054b77d",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_bae0cf97d8204c23bc03"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_grt_25ef5e99c6ef4a2f99d3",
+    "title": "English Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_8d55b07f25c346acbaa8",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_4154040759f241c8ac63",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, my friend, karibu. Big things are happening, what would you like to know?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_67a63af410834c77b5ae",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_97353f2fe11e40cb8935",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_c97ee4530a1b48b8b7d1"
+          },
+          {
+            "id": "itm_m_c9552c6d427549b6bca2",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_9896bce69a6648a38279"
+          },
+          {
+            "id": "itm_m_f4ecdd4688f24b78bbd2",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_8415041e5b63460ebc0a"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 600
+    }
+  },
+  {
+    "id": "grp_grt_35846cfc34a1413e94cd",
+    "title": "English Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_19a5f4a149494df69ff0",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3219dbae57304e18b2ab",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Good to see you {{user_name}}, my friend. Let's get to work, what can I do for you?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_5b3dff2b0056416d8cfd",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_183a1d9dea5a4dbe990f",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_1424a7bc1afd484dab2d"
+          },
+          {
+            "id": "itm_m_ea2a8751602c490bb208",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_9752476aab424567badb"
+          },
+          {
+            "id": "itm_m_b36e59dd80fc46cb93e3",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_50a51595830f442896f3"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 800
+    }
+  },
+  {
+    "id": "grp_grt_b2f71fbc4064435ab5dd",
+    "title": "Kiswahili Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_814d56efb13844ed8938",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_ed8c4f2abc674aac9baf",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu tena {{user_name}}, rafiki yangu. Leo tufanye kazi, unataka nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_33b908064d1d43efb09f",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_2255f21441824e5ab733",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_058fc7b0860541a6825e"
+          },
+          {
+            "id": "itm_m_d1bfb53848b64c5d9da2",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_91c6fde5151b43a1ace9"
+          },
+          {
+            "id": "itm_m_36af950b09de43daaa46",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_abd4bd50842c464182c9"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_e8f615257b9845afa6a3",
+    "title": "Kiswahili Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_40f88ffbc7d244a0a42e",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_9c29ac97064d4bbeaf63",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari {{user_name}}, rafiki yangu. Karibu sana, unataka kujua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_120b71fdc1524ca59a0a",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_1cc8aa9788b7493bbe8f",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_c2dc51cd24764f19a873"
+          },
+          {
+            "id": "itm_m_7b452046f0934d64b993",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_f2df033fa8cb40519635"
+          },
+          {
+            "id": "itm_m_0ac86fe16f1b434aa1b0",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_0c7f07c5dd3c40a7b48c"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1200
+    }
+  },
+  {
+    "id": "grp_grt_be1d430f0e184237a3ad",
+    "title": "Kiswahili Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_d2ee36d734c9459ea454",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_480391e5700643fda286",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Jambo {{user_name}}, rafiki yangu. Tuko pamoja, niambie unahitaji nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_01bf16aa258c4d20a180",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_1df2c3256af24f2b87ac",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_9765b5cacc254ebc9fbf"
+          },
+          {
+            "id": "itm_m_02d8e58f81d94b2db3b3",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_7ad94ba253a44b65be21"
+          },
+          {
+            "id": "itm_m_2d7f1db975044db39ee2",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_16d20dd0181f417aa79a"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1400
+    }
+  },
+  {
+    "id": "grp_grt_40db4429e8d548b99b4e",
+    "title": "Kiswahili Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_0bcf7c12b97b4f35a1f6",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_f752863b43be41179e9c",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, rafiki yangu, karibu. Mambo makubwa yanafanyika, unataka kujua nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_453137fe58d441d19bb7",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_50f0691c3d5b459db218",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_0a806b8b5a2c4507b1b2"
+          },
+          {
+            "id": "itm_m_942745606e4044b0886b",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_bbb8144141f5401d8269"
+          },
+          {
+            "id": "itm_m_444f68ff34464a1e9920",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_982b96b070344e4183fb"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1600
+    }
+  },
+  {
+    "id": "grp_grt_a1fc1cd4cb5d4717a576",
+    "title": "Kiswahili Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_54e54098462c4855b94e",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_ebed08c51e2b429babba",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sawa {{user_name}}, rafiki yangu. Karibu kijiweni, tunaweza kukusaidia namna gani?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_4c62fa5b589041eda1ec",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_236766bdc0ff458f9d48",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_87104edbe23e424c9e9b"
+          },
+          {
+            "id": "itm_m_6b945bdf8b594868a00a",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_5fddc2a887394af794b4"
+          },
+          {
+            "id": "itm_m_d13df362a65740f2ae3e",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_32b4290ba2e6483cbc12"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1800
+    }
+  },
+  {
+    "id": "grp_grt_357c98c162fb406a8972",
+    "title": "Sheng Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_ddad7b59730e45429fea",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_6e389988335c44c18378",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa {{user_name}}, my G. Form ni gani, unataka tuangalie nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_c22351ff918f4828a556",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_7e45fcf0b6fa4fe4b55c",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_8b8db30c98f84e5ebc67"
+          },
+          {
+            "id": "itm_m_d1d06fb365e54b3b8bc4",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_c740ab885aff4ab591b3"
+          },
+          {
+            "id": "itm_m_65b0310e31ca4235993f",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_d177252bd2e54b358b31"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_grt_3eefff5c53e649df816d",
+    "title": "Sheng Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_7c6b7126b55c42e5bf13",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_d71423d5169c420ab890",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Niaje {{user_name}}, my friend. Karibu kijiweni, tuchape stori, unataka nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_c2e7244661fa4ca584e7",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_e92f282b0ecb42faad19",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_3f3bff73c7cc422f8cf0"
+          },
+          {
+            "id": "itm_m_27209a38a4df41ffac6b",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_fb74f6d7060d44dc8e41"
+          },
+          {
+            "id": "itm_m_460e5cb122f0482a8eed",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_5239e4c6d6574c09a608"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2200
+    }
+  },
+  {
+    "id": "grp_grt_3a58e4c31b7f48b08dff",
+    "title": "Sheng Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_16f5898f8ec446d1bd8a",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_061cfa723c164341b4cb",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Rada {{user_name}}, my G. Mambo ni fresh, niambie unataka kukagua nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_b65e3573d054456da200",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_7a921fa6861e4cbd9a46",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_982b1b7a611f433cbcb1"
+          },
+          {
+            "id": "itm_m_1109f109bf6e4d2c884e",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_9827681af6d3400fbba3"
+          },
+          {
+            "id": "itm_m_343d1ec8f1764d96967e",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_35ab9de303a545eea678"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2400
+    }
+  },
+  {
+    "id": "grp_grt_90f829830c3c452aaa12",
+    "title": "Sheng Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_b58733d6fa194f2880a1",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_c4b30d245274478b89d5",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Vipi {{user_name}}, my friend. Tuko kazi, unataka tuanze wapi leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_c054c97bdca54723b5e0",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_9f8e7445e8ca43bdaaec",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_0e068771575148959d18"
+          },
+          {
+            "id": "itm_m_8ec85aa111894393878f",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_3b7b6fd15e8746a6817f"
+          },
+          {
+            "id": "itm_m_21acc95dd8f14662923b",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_e6af5a2f11a54db6b78a"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2600
+    }
+  },
+  {
+    "id": "grp_grt_09ad40871f9a4d01b447",
+    "title": "Sheng Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_f1a7d284c6a34e3b88a7",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_45eefe3c82ff44c1b5f5",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, my G, karibu. Poa sana uko hapa, unataka nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_4015cabc583143368329",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_460faad4017e43999822",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_0d9346129e1b4b999c49"
+          },
+          {
+            "id": "itm_m_c3ebba83a96d49738dfa",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_dbf68d844be44979ae5a"
+          },
+          {
+            "id": "itm_m_0f9183e580564ab194d0",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_bef6776b10fe4343872f"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2800
+    }
+  },
+  {
+    "id": "grp_grt_625d5aa8a93b43ce99b1",
+    "title": "English Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_7fba9280084f4554aeb7",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_22b46b0ed3944a09ac4f",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu {{user_name}}, my friend. Let's get to it, what would you like to explore today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_d970affc367d4435ad18",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_a3d4c7017062445e8477",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_a38aa6f600824e408398"
+          },
+          {
+            "id": "itm_m_60d0f1aa7c974162bdc0",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_e0bfdda148dd4018a18b"
+          },
+          {
+            "id": "itm_m_48ac6e6fb4c542d3978b",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_0c4ffa8463234160a742"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_b9a256f620494a4e87c7",
+    "title": "English Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_f97d3d7ea8364851ad81",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_6e149466eba345698059",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Hello {{user_name}}, my friend. Welcome, ready to take action together?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_8af49f796184465cb118",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_a161550f96b94888af9f",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_3dd4ed097aeb4ff284fd"
+          },
+          {
+            "id": "itm_m_a19b1426855a4c598a65",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_a8dd3030ae2f4575ad45"
+          },
+          {
+            "id": "itm_m_4754d16f98d94e50b6a2",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_df68395d0756492bbc23"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_grt_6033f8471a87476d8d11",
+    "title": "English Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_b09346bd4f9f4573b567",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_03ce4ae0986b4c12b9ff",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Welcome {{user_name}}, my friend. I'm glad you're here, what's on your mind today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_c300743c22ba4397a044",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_9979bf82cd864478a120",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_e69a63a11bc64ea19eef"
+          },
+          {
+            "id": "itm_m_523ee877206444f99bcb",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_4199d6f78d5349b49511"
+          },
+          {
+            "id": "itm_m_6fe29535bf104e048ba1",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_6eaf88cc12084af58ac9"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_grt_2d4961b7fa5a4de8a355",
+    "title": "English Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_7dd93980e4c048bc9d09",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3b70b0cefb314e11b7ff",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, my friend, karibu. Big things are happening, what would you like to know?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_30f8ec913aa149aeab9e",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_6570e481c21e42afaa0f",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_471e0a470d794b299c5f"
+          },
+          {
+            "id": "itm_m_9246923d83954daaa19c",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_0ebbb9726d9546b5a77a"
+          },
+          {
+            "id": "itm_m_125b18bce9df4bedb466",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_9d97759c56304bd7b84d"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 600
+    }
+  },
+  {
+    "id": "grp_grt_0db5d1961ed5470ab35e",
+    "title": "English Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_744b98c1700a400d838d",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_597b107646af4d649c20",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Good to see you {{user_name}}, my friend. Let's get to work, what can I do for you?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_4f0021cfddca444a93e1",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_ed76760031d34b6d97a8",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_ae231e80327944c4ac8d"
+          },
+          {
+            "id": "itm_m_906e73dc5bde4c398959",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_4487377fd52e43ef939d"
+          },
+          {
+            "id": "itm_m_1c63f5ae2c384ef6b60f",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_eeadf7a158db4b9ca009"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 800
+    }
+  },
+  {
+    "id": "grp_rt_2c48cce6b921433b9f3e",
+    "title": "English Router",
+    "blocks": [
+      {
+        "id": "blk_cond_6c72a49e210a4bc68a88",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_3b7c38aa2a9f460e851a",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_d0c7a6bc2d3e40c796a3",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_dc35adf09c5d4b63bf81"
+          },
+          {
+            "id": "itm_cond_660849a08c2d461288ea",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_98857cb6f1a84ce5b1bd",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_09afc2ea0d7c409c8810"
+          },
+          {
+            "id": "itm_cond_01d8482ab6bd47ca9282",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0250e0085456489ebcfc",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_84d03d2e401f4122b7f9"
+          },
+          {
+            "id": "itm_cond_7ae2e9697199412ebf51",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_536cde209ec040c9b455",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_67eff03b0c2d48bcb21a"
+          },
+          {
+            "id": "itm_cond_a71514f720684db2a11a",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_bb799c17c5ff46a9b36c",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_18c8dedd55a44f11a8c5"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_90c7beb8ca9948569f7b",
+    "title": "Kiswahili Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_5e1cdddd78e84c248f79",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_d778e961098e40309a76",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu tena {{user_name}}, rafiki yangu. Leo tufanye kazi, unataka nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_c33f55f0d1544b6b94cf",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_50860861283549d0a6ee",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_79990900c6c7454da1fa"
+          },
+          {
+            "id": "itm_m_e27a0c8067b7455d872f",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_4452e425374a4bb782c7"
+          },
+          {
+            "id": "itm_m_a6727ad999564fa2af97",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_ab6d676aea034e1c8fbb"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_654950c701bc4593bf90",
+    "title": "Kiswahili Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_90f393e676124ec3a178",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_195d679e439d4a609bdf",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari {{user_name}}, rafiki yangu. Karibu sana, unataka kujua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_4cd4ee8489da44ca993e",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_31b31a57073945cba686",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_e3f144053f6a4880bea9"
+          },
+          {
+            "id": "itm_m_9a85642173684c51a9fb",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_9f04749aef024275b910"
+          },
+          {
+            "id": "itm_m_e142f0519ac64479a9d7",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_2a8515f8be6949a48585"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1200
+    }
+  },
+  {
+    "id": "grp_grt_c23d943989584897b9ce",
+    "title": "Kiswahili Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_67fa1860500f4afe8702",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_65448b37624d435e9ee8",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Jambo {{user_name}}, rafiki yangu. Tuko pamoja, niambie unahitaji nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_e395f8403ba749a98401",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_448b172ef9ad4858afe3",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_6f52ab5356f34fbd9e0d"
+          },
+          {
+            "id": "itm_m_3588ac0c5e8348a59799",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_d582025c6fd34776851b"
+          },
+          {
+            "id": "itm_m_5da76444e52240189b3b",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_ac3b3f4cb4c44832a91a"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1400
+    }
+  },
+  {
+    "id": "grp_grt_5fa87c84dd384fe9b4a9",
+    "title": "Kiswahili Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_fe55a2b6ef6845119d1a",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_00fb480518284ae4bce0",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, rafiki yangu, karibu. Mambo makubwa yanafanyika, unataka kujua nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_1720103524644dfc856f",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_67da39235b024a11a6d4",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_93e14161806847529242"
+          },
+          {
+            "id": "itm_m_757aa460eb7640b5a623",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_77e3d3cc50b546008f97"
+          },
+          {
+            "id": "itm_m_f9d73dbb06c24018beaa",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_5f19c54b86794782b3c8"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1600
+    }
+  },
+  {
+    "id": "grp_grt_23998366578746be9265",
+    "title": "Kiswahili Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_e70ad8d663184393aade",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_cebf415445944308947f",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sawa {{user_name}}, rafiki yangu. Karibu kijiweni, tunaweza kukusaidia namna gani?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_d823caec453a44c19651",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_f69446107c064ff68558",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_0c2cf54e26d546418963"
+          },
+          {
+            "id": "itm_m_1869ca18a62244bcb47f",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_4202c607be7346ca8962"
+          },
+          {
+            "id": "itm_m_ea72f6cbd5fa41dd9245",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_1d22f49bcd014e1a93e8"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1800
+    }
+  },
+  {
+    "id": "grp_rt_0d020c32ee294d99a499",
+    "title": "Kiswahili Router",
+    "blocks": [
+      {
+        "id": "blk_cond_db79ac3bd4504ebaacde",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_41dac7e6445b40bb8cab",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_7caa5f26e0204ac1a674",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_82ae90eb1546436185be"
+          },
+          {
+            "id": "itm_cond_86462f556b0f4aa39845",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_4211c99afbcd4d77897c",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_d288efc00fcf44c5ba3b"
+          },
+          {
+            "id": "itm_cond_17698c998c7d4a9fb31b",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_16d388fae8324f1194ce",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_33edb98cb5a44b2c9513"
+          },
+          {
+            "id": "itm_cond_afa518004fa548348809",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0f003bff62f04b11ac17",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_2b1fe820d41b4778b9d8"
+          },
+          {
+            "id": "itm_cond_c4793e9b77764b1e9fa8",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_07feb40861234e949d55",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_2d4a069dad3c444a8aae"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_7a6636a6a3b14055a5c3",
+    "title": "Sheng Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_27af7bcec8e3486cbdcc",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_58012d5ad33d4beabd09",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa {{user_name}}, my G. Form ni gani, unataka tuangalie nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_8a0c955608434b3ab850",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_bead99d980f541fc9e11",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_65ec6dc5a8394a6e89be"
+          },
+          {
+            "id": "itm_m_0b2d85cdc70f4ab6938a",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_6adfd674f2ee4d81bb8a"
+          },
+          {
+            "id": "itm_m_5239e0d8086e46869591",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_f46f9d70e135490595ef"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_grt_90187ac49a4f4f4ba426",
+    "title": "Sheng Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_0828560deccb404e82a6",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3c750bb08979435b8d62",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Niaje {{user_name}}, my friend. Karibu kijiweni, tuchape stori, unataka nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_6de4901046064813b8cf",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_896902faea8c4f8691aa",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_d9e71b237b354ec68310"
+          },
+          {
+            "id": "itm_m_1d7c3ed896394fe4bb35",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_ca7fa08cdbb640ba99b3"
+          },
+          {
+            "id": "itm_m_83d48399206443a58581",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_8cd82b4172b04b19a6cb"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2200
+    }
+  },
+  {
+    "id": "grp_grt_6b93d29b0afe4d708dc0",
+    "title": "Sheng Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_a0cb4f2e5c7344528fff",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_e5f9fbf1b68d4a2995ce",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Rada {{user_name}}, my G. Mambo ni fresh, niambie unataka kukagua nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_fb1d502ce708444b8e7d",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_1822d4cd7da648818494",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_ee57b654cbb740fd801b"
+          },
+          {
+            "id": "itm_m_bcbbb36d0b9e4a249f39",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_6412007be4214c1391b8"
+          },
+          {
+            "id": "itm_m_d77b36cc10a047439332",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_63f024a26f3547008feb"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2400
+    }
+  },
+  {
+    "id": "grp_grt_3327056526344e1bae74",
+    "title": "Sheng Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_a57b5ff78d1e4067b0cf",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_bd49279ea68a4f409722",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Vipi {{user_name}}, my friend. Tuko kazi, unataka tuanze wapi leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_3309bff171c8469a88c5",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_614ad1938b334361857d",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_daeb1bb3fa0349b0aa89"
+          },
+          {
+            "id": "itm_m_cec2f9bfff21402ca33d",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_05a88a25c2624df58d29"
+          },
+          {
+            "id": "itm_m_80996a863ef84efdab64",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_af315262345f4f6592b3"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2600
+    }
+  },
+  {
+    "id": "grp_grt_7234857a3fb64040bc99",
+    "title": "Sheng Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_f7f01d8d2a8a42aabf89",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_8e86f7418e9e4f2c81bc",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{user_name}}, my G, karibu. Poa sana uko hapa, unataka nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_98b065e16b224412a8c2",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_98584022556d46b19f21",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_e109f8ed27554cc591c3"
+          },
+          {
+            "id": "itm_m_7e27bb6deff84b9cb415",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_9d2eb93da8f14af99d7f"
+          },
+          {
+            "id": "itm_m_6b24bbcd04804a37bc25",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_bd95163f95094fed8466"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2800
+    }
+  },
+  {
+    "id": "grp_rt_5eabfe716ef54e1594c2",
+    "title": "Sheng Router",
+    "blocks": [
+      {
+        "id": "blk_cond_bdb5c6e2bd9c4ce0a11f",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_edeed33c67114205aeff",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_7bd5463dc27b4539b724",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_149c3a7d2582488989cf"
+          },
+          {
+            "id": "itm_cond_dc44a59266854f019a58",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_6c12fe22db6043f1b0cd",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_223d3cc18a0e4d62a5c1"
+          },
+          {
+            "id": "itm_cond_7da991b254254c2683a3",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_feb48319189248a585fc",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_3ae2e57f1c5d47c3b5a8"
+          },
+          {
+            "id": "itm_cond_18460125869b4b889790",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_a95cd2f567904ca7a699",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_908165fbb21b4693ba63"
+          },
+          {
+            "id": "itm_cond_5e604e3c398f44d1b23f",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_ec3ad119a24c41e6b0b2",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_a1bcd6fb94f7481cbcf9"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_grt_e833d3c5a3ec462bb51a",
+    "title": "English Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_4f61b40f3e5447fe8245",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_6700b4b7fbb547fd823a",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari yako, {{display_name}}! 👋\n\nIt's me, William Ruto. I know you're busy, and I respect that. So let me be quick.\n\nThis is your direct line to what my government is doing for you, real projects, real money, real facts. No spin, no noise.\n\nWhat would you like to know today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_2a8d95d1875449238f23",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_642d309ba8df429391fb",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_bc580f3767fb4163a3eb"
+          },
+          {
+            "id": "itm_m_0e4740b167b74918ac2a",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_13f65be3914a4642b42f"
+          },
+          {
+            "id": "itm_m_b78923803cd144068631",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_d7c92c64e902469d8395"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_042db91f89af490cbccd",
+    "title": "English Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_d0b2d3acbad64971a084",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_8688e6e60f3148c49464",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nYou know me, I came from nothing, a chicken seller from Sugoi. I understand what it means to hustle every day for your family.\n\nThat's exactly why I built this, so you can ask me anything, and I'll give you straight answers about what we're building for Kenya.\n\nWhat's on your mind?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_d632bb44a96e4dccba64",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_a2ff862d5cd5487cb68a",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_656b946a5a9b4374bd9d"
+          },
+          {
+            "id": "itm_m_7bf78d0279ec4d4c965a",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_885a69b7b99546049fcd"
+          },
+          {
+            "id": "itm_m_bdb6ae08e12d41ccba89",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_a4fd8c52c1d343448ac5"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_grt_2919ecf7932d4ccc8c02",
+    "title": "English Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_57ae73c32a424f58b9a2",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_d1ccc8bbccfa41d794ef",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari za leo! 👋\n\nI'm here. Not my spokesperson. Not a press release. Me.\n\nI started this because I believe in you, {{display_name}}, and every Kenyan deserves direct, honest communication about what your government is doing.\n\nAsk me anything, projects, policies, or what's happening in your area. Facts only."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_af79267d8a014686b662",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_9af2d956efea4664ae11",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_7c8259d756464fed8f91"
+          },
+          {
+            "id": "itm_m_db6b7a476fa34715ac81",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_d59091fc806444dc9d4a"
+          },
+          {
+            "id": "itm_m_03a189e1b09e4ce391e5",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_4227a2ccb0a945189741"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_grt_69d478e3e8ea4130b3cf",
+    "title": "English Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_bd017f51627547be9443",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_597b253d4b0942328c2f",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nEvery morning I wake up thinking about one thing, how do I make sure the mwananchi's life is better than yesterday?\n\nThis is where that conversation happens. Whether you're a farmer, a trader, a student, or just a curious Kenyan, you belong here.\n\nWhat can I help you with today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_0ae53b0eb4c849ba9b7d",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_d6428bfe3c6d426b972a",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_9f1a3e5f2e564e5b97f0"
+          },
+          {
+            "id": "itm_m_b11781a98e7c4d73a7a5",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_73bacf911ac945c89d24"
+          },
+          {
+            "id": "itm_m_b863bd266bc0408da8d1",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_63e6d3ed8aff4671b4d6"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 600
+    }
+  },
+  {
+    "id": "grp_grt_1f4bdb516c9f4157b24d",
+    "title": "English Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_a4cf1046928544039832",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_4b6a357769ea46ec9d6a",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nKenya's story is being written right now, and you are part of it.\n\nWhether you're a hustler in Gikomba, a farmer in Rift Valley, a student in Kisumu, or a mama running a small business, this government is working for you.\n\nLet me show you what's being done. Ask me anything. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_e68aca24837849bca836",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_b406ef900bb14c7f9cb1",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_e6abeb4a041d4022a861"
+          },
+          {
+            "id": "itm_m_03bfe9986c3c40a483f9",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_48cc19094f064e0aaee4"
+          },
+          {
+            "id": "itm_m_7a346873b2ef40088e4e",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_20dfd2cac38d4e50b706"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 800
+    }
+  },
+  {
+    "id": "grp_rt_c792716ee08342ceb627",
+    "title": "English Router",
+    "blocks": [
+      {
+        "id": "blk_cond_013e15742c22493fb25b",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_9ea1d71f3a564d9fae02",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_02781bfb9b7a4cfeb26c",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_17ae8a2d75fe4f7794b6"
+          },
+          {
+            "id": "itm_cond_73eccca0449b43e092e7",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0d992f2a80d24fd6b9e2",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_19ac181ff14e466ca204"
+          },
+          {
+            "id": "itm_cond_45ebbe3b4fb940a09741",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_2272ace9441e49018776",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_1799158d5217497d86f0"
+          },
+          {
+            "id": "itm_cond_40f41194a2214db58558",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0eb0cf24bf2146ea9780",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_c53ac26c152f4e5da103"
+          },
+          {
+            "id": "itm_cond_4ca390df45c841139ec7",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_d9dfc0c27c534c3d9dea",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_1cbee164257f491ebe9f"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_6e4161d8df37405c99f1",
+    "title": "Kiswahili Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_ee7b49b28dfa4d8fa992",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_8093a592f21144ec9b68",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari yako, {{display_name}}! 👋\n\nNi mimi, William Ruto. Najua uko busy, na naheshimu hilo. Kwa hivyo wacha niwe mfupi.\n\nHii ni njia yako ya moja kwa moja kujua kile serikali yangu inakufanyia, miradi halisi, pesa halisi, ukweli mtupu. Hakuna propaganda, hakuna kelele.\n\nUngependa kujua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_60a707bbd6fa4b8c8205",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_1b7db9c328f241c59a11",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_f6e5813eb212452799fd"
+          },
+          {
+            "id": "itm_m_5926f88cd3284e9db99a",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_1ca5631373cf48e8a5e1"
+          },
+          {
+            "id": "itm_m_991a139af06d412c8312",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_ecd1bb1f81624187b234"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_e510a158070944c6befb",
+    "title": "Kiswahili Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_8877162c82864fb09b7f",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_8688f4cff0b34510927d",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nUnanijua, nilitoka chini, muuzaji wa kuku kutoka Sugoi. Naelewa inamaanisha nini kuhustle kila siku kwa ajili ya familia yako.\n\nNdio maana nilitengeneza hii, ili uweze kuniuliza chochote, na nitakupa majibu ya moja kwa moja kuhusu kile tunachojenga kwa ajili ya Kenya.\n\nUnawaza nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_9d0c17b4f68d4849882e",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_f41e55c0eb2a47ad91d8",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_9bef5506240c4c76a7f2"
+          },
+          {
+            "id": "itm_m_e1c727c36e7a41c3adc9",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_56409cacf4e3498ea06a"
+          },
+          {
+            "id": "itm_m_cc5b575332eb42c29de6",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_56228e3f81c34c958ee1"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1200
+    }
+  },
+  {
+    "id": "grp_grt_7df93df73a59430e8fb8",
+    "title": "Kiswahili Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_daf6e7c015fb40428be7",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_a04a62cb10634503b160",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari za leo! 👋\n\nNiko hapa. Sio msemaji wangu. Sio taarifa kwa vyombo vya habari. Mimi binafsi.\n\nNilianzisha hii kwa sababu nakuamini, {{display_name}}, na kila Mkenya anastahili mawasiliano ya moja kwa moja, ya kweli kuhusu kile serikali yako inafanya.\n\nNiulize chochote, miradi, sera, au kinachoendelea katika eneo lako. Ukweli mtupu."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_65d105305a7a4179adb9",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_0fb4a1227a3e420eae41",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_123860a8b7c442108301"
+          },
+          {
+            "id": "itm_m_30c939cb3cd1437dbac9",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_94fca9aef9974bd7b462"
+          },
+          {
+            "id": "itm_m_3bcc1b16d4b2459fb1bc",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_980c403d651e498d999e"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1400
+    }
+  },
+  {
+    "id": "grp_grt_b50ff0625ac9493e9b2c",
+    "title": "Kiswahili Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_f982fefed79f4d9b8831",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_600e7e3a406e4552b919",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nKila asubuhi ninaamka nikiwaza jambo moja, nitahakikisha vipi maisha ya mwananchi ni bora kuliko jana?\n\nHapa ndipo mazungumzo hayo yanafanyika. Iwe wewe ni mkulima, mfanyabiashara, mwanafunzi, au Mkenya yeyote anayetaka kujua, hapa ndio mahali pako.\n\nNinakusaidiaje leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_5bf74be0c67049088672",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_30a131fadad844c69159",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_d346d7d9dc60422fa164"
+          },
+          {
+            "id": "itm_m_dd9f124b57754a61826f",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_efa29f64ef8e484a9186"
+          },
+          {
+            "id": "itm_m_2c274d4a3bf64619bdf0",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_6db17339950a4364b8d8"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1600
+    }
+  },
+  {
+    "id": "grp_grt_3c56c853997a473e8df1",
+    "title": "Kiswahili Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_ba30d666060a471cac90",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_278a765cc915468ca960",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nHistoria ya Kenya inaandikwa sasa hivi, na wewe ni sehemu yake.\n\nIwe wewe ni hustler pale Gikomba, mkulima Rift Valley, mwanafunzi Kisumu, au mama anayeendesha biashara ndogo, serikali hii inakufanyia kazi.\n\nWacha nikuonyeshe kile kinachofanywa. Niulize chochote. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_6f5cc1db960e4bdaa391",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_81b411ade18042c0a199",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_2f1cb69eae32498c93ee"
+          },
+          {
+            "id": "itm_m_1df609b2b9ba43f89b7e",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_92d3a2afc05c48fd93a6"
+          },
+          {
+            "id": "itm_m_08046ae0d9fc4ad7a02f",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_56ec2e0d5f824099b07d"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1800
+    }
+  },
+  {
+    "id": "grp_rt_5f539ddd64c3410d9a5e",
+    "title": "Kiswahili Router",
+    "blocks": [
+      {
+        "id": "blk_cond_4f6621c02362479e8f7c",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_6f99249e2bdb48febc5f",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_2fca3af9074946b7af05",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_1ef7f199e1d541f494b5"
+          },
+          {
+            "id": "itm_cond_8141063fbc4d4d9db072",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_1281fdc83ab14732bb20",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_2a8d035041774ddfb750"
+          },
+          {
+            "id": "itm_cond_b4e7cdd4f8f9434f9339",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_290c5812c36947aab2fe",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_c0fe75ea808c4b5382da"
+          },
+          {
+            "id": "itm_cond_204cf7e86e744f63836a",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_984cf79be58c48d88be1",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_1a558403406746ff8975"
+          },
+          {
+            "id": "itm_cond_f95231a04ca74ac88551",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_cf0bdd70c8274e9eabc0",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_f5c844a9a1b841bfb3e5"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_1e5cc8df6d7e472ca71b",
+    "title": "Sheng Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_97bcdd7640f04be0aa43",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_01357c22028a45beb115",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Niaje, {{display_name}}! 👋\n\nNi mimi, William Ruto. Najua uko na form mob, na narespekt hio. So wacha niende straight to the point.\n\nHii ni direct line yako ya kujua chenye serikali yangu inakufanyia, maproject tialala, ganji halisi, facts tupu. Hakuna kupiga stori, hakuna kelele.\n\nUnadaiku jua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_1d372d86dac94ad38532",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_c0da8eb7cc0b405aae54",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_98c17fd738b145b18269"
+          },
+          {
+            "id": "itm_m_5c4a0a3dee15400abb70",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_d35a237a927742eaadd9"
+          },
+          {
+            "id": "itm_m_3a9d3ef07aad4f00b9ec",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_21d814f7fec542bfa71b"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_grt_9608f1d463654044b306",
+    "title": "Sheng Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_f8b468fcfbd24690b8f3",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3074d2bc03c546c09884",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nUnanijua, nilitoka ground, msee wa kuuza kuku kutoka Sugoi. Naelewa inamaanisha nini kusaka ganji kila siku kwa ajili ya familia yako.\n\nNdio maana niliunda hii form, ndio uniulize maswali yoyote, na nitakusho ukweli mtupu kuhusu chenye tunajenga hapa Kenya.\n\nUko na rada gani?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_5778e1b9fde24837bf6c",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_1cc9eb8cfb9f4396a319",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_d08b8739945046699e87"
+          },
+          {
+            "id": "itm_m_71711805ee6f45ccb163",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_f2e309b8cbac4f49bee8"
+          },
+          {
+            "id": "itm_m_801be02d4b9d4967bc9c",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_e81e163db44a47d68463"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2200
+    }
+  },
+  {
+    "id": "grp_grt_1e7a9991690f4c378fe7",
+    "title": "Sheng Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_e1bcc9f1402445da92b2",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_eab2990406b24144937d",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Rada safi! 👋\n\nNiko hapa. Sio wasee wangu. Sio ma press release. Ni mimi personally.\n\nNilianzisha hii mchongo juu nakuamini, {{display_name}}, na kila Mkenya anadeserve kuskia the raw truth kuhusu chenye serikali yenu inafanya.\n\nNiulize swali yoyote, ma-project, ma-policy, au form ya mtaa yako. Facts tupu."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_fc77b961e9b34c95b9dc",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_138e0333ab7647fd8421",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_3ad42c3475234dcaa2b0"
+          },
+          {
+            "id": "itm_m_8ea548a73e274f08a5b0",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_78114ac2086c4919a2a2"
+          },
+          {
+            "id": "itm_m_0dea3cf1c21b4e7c8afd",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_f9638924cbd242ca9013"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2400
+    }
+  },
+  {
+    "id": "grp_grt_db6d2aa02b094ffeb7ff",
+    "title": "Sheng Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_30e9292f625f4db69b22",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_57d6ece9bef1421bb5ba",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nKila asubuhi nikiwaka, nakuwanga na wazo moja, nita make sure aje maisha ya mwananchi iko fiti kuliko jana?\n\nHapa ndio hio stori inapigwa. Kukuwe wewe ni mkulima, mdosi wa biz, mrazi, au msee tu anataka kujua form, hapa ndio home.\n\nNikusaidie na nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_72f582b134ff478097f2",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_7e16d84d9fc24462a8c9",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_2c9b896bb42e42f28251"
+          },
+          {
+            "id": "itm_m_becdde049dfd4f70be1d",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_be14a50ad54641c2abc4"
+          },
+          {
+            "id": "itm_m_caf1906b3a6b4acf9c3a",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_aaef135708504942aa98"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2600
+    }
+  },
+  {
+    "id": "grp_grt_dd1d0c419b1b4b31ad37",
+    "title": "Sheng Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_985b75c90c724c358f12",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_0651df7c84de4ab3a956",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nStori ya Kenya inaandikwa sahii, na wewe uko ndani ya mpango.\n\nKukuwe wewe ni hustler pale Gikomba, mkulima wa Rift Valley, mrazi wa Kisumu, au mama fua anapiga biz yake, hii serikali inakufanyia kazi.\n\nWacha nikuonyeshe form inasonga aje. Niulize swali yoyote. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_42b95387eff24c54ab48",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_9ec5303a5e8a4fdf8d77",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_2d868e60fcd84e378192"
+          },
+          {
+            "id": "itm_m_ff815bd09beb4c6cac17",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_3b568701b8534db79cb4"
+          },
+          {
+            "id": "itm_m_269dddad220f4645a3ad",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_ab269e28721041d5ad16"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2800
+    }
+  },
+  {
+    "id": "grp_rt_32ead840119f4bd79672",
+    "title": "Sheng Router",
+    "blocks": [
+      {
+        "id": "blk_cond_710c8cfc312a43e9b87a",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_af1fa878f79b41629d5e",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_3882fda08bf042938719",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_bf8ee7b822904c7eb02b"
+          },
+          {
+            "id": "itm_cond_ce92826cfc37400eae5a",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_08ec50f1336f4f1fb8fb",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_f793d7fdd4204fa6a820"
+          },
+          {
+            "id": "itm_cond_db4653072d0b43b9aea8",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_8319d29fa5a445d3be13",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_b3a4dd6be52545cd9b6d"
+          },
+          {
+            "id": "itm_cond_9b0e8eb8864749d48d31",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_45ace39fb4804bc68dc6",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_1af50053daee4fb7a779"
+          },
+          {
+            "id": "itm_cond_e613eef34f5c44018f52",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_078945bade2f48d6bbb6",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_d22c012d4c9043c5a62e"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_2b0554a47ef54af9a4a1",
+    "title": "Onboarding & Greeting",
+    "blocks": [
+      {
+        "id": "blk_ask_98576c6f02ba4acfbb7a",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_6c0207b4a37b40d8ada3",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu {{user_name}}, my friend. Tuongee, unapendelea lugha gani?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_ch_32eb3738b1ae41d8ac76",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_f9ae403d1497491f8483",
+            "content": "🇬🇧 English",
+            "outgoingEdgeId": "edg_2eb1a15a665448a4b9af"
+          },
+          {
+            "id": "itm_500d539a20fd4ac38faf",
+            "content": "🇰🇪 Kiswahili",
+            "outgoingEdgeId": "edg_1cb757644a734fe2837a"
+          },
+          {
+            "id": "itm_6b30b05755cf4a6b8e56",
+            "content": "😎 Sheng",
+            "outgoingEdgeId": "edg_eef59a4474d249e5841c"
+          }
+        ],
+        "options": {
+          "variableId": "var_lng4e9855517f074ae6b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_fn_00b72f0ff8ff4b51951f",
+    "title": "Full News",
+    "blocks": [
+      {
+        "id": "blk_txt_a532578114ef4773b732",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_e193a48b250f4d7caff5",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{latest_news}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_4eaf2be001a144cc82ad",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_back_9d0fe8ac4f5e48beb315",
+            "content": "⬅️ Back to Main Menu",
+            "outgoingEdgeId": "edg_9bc55536ee874b7a87c3"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 1600,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_n_81ef605c32dc41a69c52",
+    "title": "News English",
+    "blocks": [
+      {
+        "id": "blk_txt_a4c440e3a60a4581af94",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_32e0eb07c57a457d8512",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{dynamic_summary}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_b3ad8f85c49a49f28fb4",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_40e224d89a304b4bab0b",
+            "content": "📄 Read Full Updates",
+            "outgoingEdgeId": "edg_184fd9bb77ee45bc8a38"
+          },
+          {
+            "id": "itm_27b67dfc7eac431bba52",
+            "content": "⬅️ Back to Menu",
+            "outgoingEdgeId": "edg_e1f4a33b4e98495c8414"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 1200,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_n_0a2b789621d3440486d4",
+    "title": "News Kiswahili",
+    "blocks": [
+      {
+        "id": "blk_txt_5b4b4370883541e789c8",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_d3314950ecd34acabc00",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{dynamic_summary_sw}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_64f357a29e574972ab25",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_69a3443f5ad349b7a507",
+            "content": "📄 Soma Taarifa Kamili",
+            "outgoingEdgeId": "edg_21af023c32db40b98c5a"
+          },
+          {
+            "id": "itm_4c896afdc97842d19d2c",
+            "content": "⬅️ Rudi Nyuma",
+            "outgoingEdgeId": "edg_0a88c48f6ee84499aa09"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 1200,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_n_d295505b937d4450b3eb",
+    "title": "News Sheng",
+    "blocks": [
+      {
+        "id": "blk_txt_21748a0e80504bd487eb",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3103df133e304432a21a",
+              "type": "p",
+              "children": [
+                {
+                  "text": "{{dynamic_summary_sh}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_763d07c3e000424085c1",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_f6b27d7a226147c8a635",
+            "content": "📄 Cheki Rada Yote",
+            "outgoingEdgeId": "edg_931df04c40ad4753a98e"
+          },
+          {
+            "id": "itm_54ff6e6144aa4a2fadaf",
+            "content": "⬅️ Rudi Base",
+            "outgoingEdgeId": "edg_d59f2bb5ca8c452b8a32"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 1200,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_grt_3c18ce5637744e0cac50",
+    "title": "English Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_6fb12e794c1f47c2af45",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_924b359e3a2f47c9aa31",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari yako, {{display_name}}! 👋\n\nIt's me, William Ruto. I know you're busy, and I respect that. So let me be quick.\n\nThis is your direct line to what my government is doing for you, real projects, real money, real facts. No spin, no noise.\n\nWhat would you like to know today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_97e9da103eee4d18a13c",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_cd0f02eb136245679729",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_7d5ea3956ac74dc29a9f"
+          },
+          {
+            "id": "itm_m_eedf15a1e0a84f88999c",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_42557a9931204d18aabd"
+          },
+          {
+            "id": "itm_m_1b2642c231664f37a5c4",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_6039584b9fb14e248dc6"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_369de3607bf94e8499ac",
+    "title": "English Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_01996bc126a04adc851a",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_f097b33ac7d44cd88bae",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nYou know me, I came from nothing, a chicken seller from Sugoi. I understand what it means to hustle every day for your family.\n\nThat's exactly why I built this, so you can ask me anything, and I'll give you straight answers about what we're building for Kenya.\n\nWhat's on your mind?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_7de35c17506a4cd29c1a",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_ad502d0b43de414ca9f4",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_0789d43ed87645e4a39e"
+          },
+          {
+            "id": "itm_m_c647ed1458854047bbc5",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_69be0bca5f484c749041"
+          },
+          {
+            "id": "itm_m_013dd0c394a8429aa91b",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_3add7b467e0a43359c1d"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 200
+    }
+  },
+  {
+    "id": "grp_grt_e24fb10e3b58471bba02",
+    "title": "English Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_f308b05060f6470b87d4",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_eec4f19535c4477caf6e",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari za leo! 👋\n\nI'm here. Not my spokesperson. Not a press release. Me.\n\nI started this because I believe in you, {{display_name}}, and every Kenyan deserves direct, honest communication about what your government is doing.\n\nAsk me anything, projects, policies, or what's happening in your area. Facts only."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_3d1783e6e4874d8dab5e",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_7019b8b4a75a4d7f94ca",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_47c3bf3792e04d0d906f"
+          },
+          {
+            "id": "itm_m_77101866aaf44ef2b099",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_82e419896e39447d9007"
+          },
+          {
+            "id": "itm_m_ab8eb92dc9e54d619020",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_2021a1fe6c2f424089f6"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 400
+    }
+  },
+  {
+    "id": "grp_grt_3ac64fee377f4bb594de",
+    "title": "English Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_51b4207bd7fb4088a23b",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_6617e09159f64ec089cd",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nEvery morning I wake up thinking about one thing, how do I make sure the mwananchi's life is better than yesterday?\n\nThis is where that conversation happens. Whether you're a farmer, a trader, a student, or just a curious Kenyan, you belong here.\n\nWhat can I help you with today?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_5dc4de35a1ec47878e80",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_aaade5bec6e94f368ada",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_2b0d1bc8145746cda13e"
+          },
+          {
+            "id": "itm_m_391a2bfb4ea9433fa915",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_509c0c4ad3e041f8b635"
+          },
+          {
+            "id": "itm_m_0e6dd5fb5e8a45829513",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_2ec746af67f54ca89663"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 600
+    }
+  },
+  {
+    "id": "grp_grt_863fa0a2a2704df691a6",
+    "title": "English Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_dbc4e353ad764fd28c04",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_a2709505f28d4e4da224",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nKenya's story is being written right now, and you are part of it.\n\nWhether you're a hustler in Gikomba, a farmer in Rift Valley, a student in Kisumu, or a mama running a small business, this government is working for you.\n\nLet me show you what's being done. Ask me anything. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_a34372d917e74ecc9f58",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_7f058b3158ba4da0ae12",
+            "content": "🔥 Today's Big Move",
+            "outgoingEdgeId": "edg_97e6f835670a4c93a16a"
+          },
+          {
+            "id": "itm_m_d7cfcf6eb0da4df6bfb4",
+            "content": "📍 Projects Near Me",
+            "outgoingEdgeId": "edg_f067267ba9284939abb3"
+          },
+          {
+            "id": "itm_m_8a4a6fa11c1d4399b1c9",
+            "content": "💬 Ask a Question",
+            "outgoingEdgeId": "edg_640b3118304742cfb9f8"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 800
+    }
+  },
+  {
+    "id": "grp_rt_a5b9ec83f41f402b994c",
+    "title": "English Router",
+    "blocks": [
+      {
+        "id": "blk_cond_f289bd1a747046d0a814",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_b28bc9999d9843098243",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_6db337abcc7446bdbe05",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_6ba45e03d8424467b005"
+          },
+          {
+            "id": "itm_cond_1967f86b99a540f5a18d",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0ec28da0149946ac8ea2",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_87ef177bba8f41a7a02e"
+          },
+          {
+            "id": "itm_cond_1df78797440b4725b1df",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_b965746abe8a4de38822",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_b58beb5b9cf148f49265"
+          },
+          {
+            "id": "itm_cond_e3d0cb807e3848c8a7ee",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_e5c5c8600b4f4fe481d6",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_a1f5549ffd7348158b87"
+          },
+          {
+            "id": "itm_cond_ba5f6e9b75a34edb90a8",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_c2bcd0dc16e949d6bcce",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_46fd5a5ebdd14b98b6a1"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 0
+    }
+  },
+  {
+    "id": "grp_grt_dd06ae6820ca42448249",
+    "title": "Kiswahili Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_afdbd640329540a186a5",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_e8ec5d6cc23340149c1f",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari yako, {{display_name}}! 👋\n\nNi mimi, William Ruto. Najua uko busy, na naheshimu hilo. Kwa hivyo wacha niwe mfupi.\n\nHii ni njia yako ya moja kwa moja kujua kile serikali yangu inakufanyia, miradi halisi, pesa halisi, ukweli mtupu. Hakuna propaganda, hakuna kelele.\n\nUngependa kujua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_f6c6219a6bbf4077a23b",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_c32b9f59180143f3b962",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_ce5bd87661fd4755b095"
+          },
+          {
+            "id": "itm_m_e68eae25d4e54b29bb0c",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_ed1bbcfdcb35402a92e2"
+          },
+          {
+            "id": "itm_m_a94916209ee346c281b2",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_1a98da368d96433da518"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_9888daeaa1f7449db719",
+    "title": "Kiswahili Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_30b581a2e296407a9aed",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_ecc376eeb9ba4545b463",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nUnanijua, nilitoka chini, muuzaji wa kuku kutoka Sugoi. Naelewa inamaanisha nini kuhustle kila siku kwa ajili ya familia yako.\n\nNdio maana nilitengeneza hii, ili uweze kuniuliza chochote, na nitakupa majibu ya moja kwa moja kuhusu kile tunachojenga kwa ajili ya Kenya.\n\nUnawaza nini?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_e88274912d994cf9858b",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_5e6e5c185fcb42a694a7",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_3ea0e45076fd44cc929e"
+          },
+          {
+            "id": "itm_m_0a9d6e32e36b4e74b340",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_c6549c8a46a24885bc61"
+          },
+          {
+            "id": "itm_m_387b949488194b5588cf",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_cfd60658edf94e09ac39"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1200
+    }
+  },
+  {
+    "id": "grp_grt_126393fc4ea04d84afba",
+    "title": "Kiswahili Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_8d63d0161bb34228b14b",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_da92fcf9fe9a4bd2841f",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Habari za leo! 👋\n\nNiko hapa. Sio msemaji wangu. Sio taarifa kwa vyombo vya habari. Mimi binafsi.\n\nNilianzisha hii kwa sababu nakuamini, {{display_name}}, na kila Mkenya anastahili mawasiliano ya moja kwa moja, ya kweli kuhusu kile serikali yako inafanya.\n\nNiulize chochote, miradi, sera, au kinachoendelea katika eneo lako. Ukweli mtupu."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_91cd481dacef4671ba4c",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_5624b81b806c43089c27",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_4a2cdfd53218466fb2d1"
+          },
+          {
+            "id": "itm_m_f948733e95bf47a4b986",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_8064c28f975e466a80f1"
+          },
+          {
+            "id": "itm_m_415b54cbf7144a49be4d",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_4e05034111c5442db63b"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1400
+    }
+  },
+  {
+    "id": "grp_grt_598f80d5044041198c57",
+    "title": "Kiswahili Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_3ea1a6e2ff4240fcbdf8",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_350770283edb42ea96c6",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nKila asubuhi ninaamka nikiwaza jambo moja, nitahakikisha vipi maisha ya mwananchi ni bora kuliko jana?\n\nHapa ndipo mazungumzo hayo yanafanyika. Iwe wewe ni mkulima, mfanyabiashara, mwanafunzi, au Mkenya yeyote anayetaka kujua, hapa ndio mahali pako.\n\nNinakusaidiaje leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_2572c3b437d642d99214",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_5dccc9dabbcf4bb5b0b9",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_a0b273cdce1c48f5ae34"
+          },
+          {
+            "id": "itm_m_9810966ec4e843e49548",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_14f103252c5b4d9b8988"
+          },
+          {
+            "id": "itm_m_ed2fa0526ec24e6e9e27",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_8a6cd15b39c1422ca56f"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1600
+    }
+  },
+  {
+    "id": "grp_grt_39e6e04607d04d30a4f0",
+    "title": "Kiswahili Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_391cf666c93a4a28a424",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_3720d645e7f04a5b9431",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nHistoria ya Kenya inaandikwa sasa hivi, na wewe ni sehemu yake.\n\nIwe wewe ni hustler pale Gikomba, mkulima Rift Valley, mwanafunzi Kisumu, au mama anayeendesha biashara ndogo, serikali hii inakufanyia kazi.\n\nWacha nikuonyeshe kile kinachofanywa. Niulize chochote. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_a2a41b51004e436e917b",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_989cb10ca40945d39c85",
+            "content": "🔥 Hatua Kubwa Leo",
+            "outgoingEdgeId": "edg_a24b98f82f8a4ec0b364"
+          },
+          {
+            "id": "itm_m_de7b044d6d8743388d87",
+            "content": "📍 Miradi Karibu",
+            "outgoingEdgeId": "edg_6458db9efedb4ffaa146"
+          },
+          {
+            "id": "itm_m_1f071091e6f241c58fe3",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_c555d4bbf04a48a88441"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 1800
+    }
+  },
+  {
+    "id": "grp_rt_fa53f7dd52654cbdbdf4",
+    "title": "Kiswahili Router",
+    "blocks": [
+      {
+        "id": "blk_cond_a7831d28bb32406f9e35",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_ca2d9057a484449b9afa",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_8340cad4fccf442a9efd",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_6c2b4ebd0b3e47749582"
+          },
+          {
+            "id": "itm_cond_e3a8968d8c8543f182f4",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_f67817a342bc4c5d82d8",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_a4ba61576fac4977981f"
+          },
+          {
+            "id": "itm_cond_d803bfb50aa944e3ab08",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_0f714ecf24ee473aa264",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_a7067813ce3b4cff9630"
+          },
+          {
+            "id": "itm_cond_edaa61de5f4448efad7a",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_8e798c53c99e444ba347",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_7f4aa63de110497c92e6"
+          },
+          {
+            "id": "itm_cond_8d35c0b20518440eae35",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_e41e179a777b470fa1f5",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_391b7e66b66f4e69a5fe"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 1000
+    }
+  },
+  {
+    "id": "grp_grt_6eeeae8eabb3434c9c3a",
+    "title": "Sheng Greeting 1",
+    "blocks": [
+      {
+        "id": "blk_txt_ad4822ce77e94cf388d1",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_dfa3df1ebe8f4a53b8ce",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Niaje, {{display_name}}! 👋\n\nNi mimi, William Ruto. Najua uko na form mob, na narespekt hio. So wacha niende straight to the point.\n\nHii ni direct line yako ya kujua chenye serikali yangu inakufanyia, maproject tialala, ganji halisi, facts tupu. Hakuna kupiga stori, hakuna kelele.\n\nUnadaiku jua nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_e0a938eb3f694382be80",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_e0685c4578a84f0c8d49",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_8cb11448aed94e60b6ca"
+          },
+          {
+            "id": "itm_m_c6e468d875744534aaae",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_e8eb546497fa44c3b3c1"
+          },
+          {
+            "id": "itm_m_7297bde458e14b6ea989",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_f7b0211eaa1241238898"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2000
+    }
+  },
+  {
+    "id": "grp_grt_13ce4f4778f34626a281",
+    "title": "Sheng Greeting 2",
+    "blocks": [
+      {
+        "id": "blk_txt_a65de7276d694e88a8d9",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_20f0373382764c8594a8",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Sasa, {{display_name}}! 🇰🇪\n\nUnanijua, nilitoka ground, msee wa kuuza kuku kutoka Sugoi. Naelewa inamaanisha nini kusaka ganji kila siku kwa ajili ya familia yako.\n\nNdio maana niliunda hii form, ndio uniulize maswali yoyote, na nitakusho ukweli mtupu kuhusu chenye tunajenga hapa Kenya.\n\nUko na rada gani?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_1ba09056712a48ec8243",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_b5988195ab144f8f8b0f",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_c708f2201fe145b59190"
+          },
+          {
+            "id": "itm_m_781e30ea543b4058835b",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_811986646e7a4fadbcba"
+          },
+          {
+            "id": "itm_m_81c629bbe7b243f3928c",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_b15ca9326ad04d96bd6f"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2200
+    }
+  },
+  {
+    "id": "grp_grt_ce8a108ec55a4bbb8a7b",
+    "title": "Sheng Greeting 3",
+    "blocks": [
+      {
+        "id": "blk_txt_4bac2a5b9be7455a9595",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_9f647c8aae2b4159b1da",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Rada safi! 👋\n\nNiko hapa. Sio wasee wangu. Sio ma press release. Ni mimi personally.\n\nNilianzisha hii mchongo juu nakuamini, {{display_name}}, na kila Mkenya anadeserve kuskia the raw truth kuhusu chenye serikali yenu inafanya.\n\nNiulize swali yoyote, ma-project, ma-policy, au form ya mtaa yako. Facts tupu."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_0625c4f4c2124b1fbb9b",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_bd8f8d750b6e4c8e861b",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_a7a87d5bc13e4bbb9c43"
+          },
+          {
+            "id": "itm_m_49735d4e0e1f42599261",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_e4f4bc830f1f4d5e937f"
+          },
+          {
+            "id": "itm_m_4a6061c8cb954352a66d",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_66dec7901eb64eeca430"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2400
+    }
+  },
+  {
+    "id": "grp_grt_f92c3d15e88249c08e6e",
+    "title": "Sheng Greeting 4",
+    "blocks": [
+      {
+        "id": "blk_txt_8cb4d0d81a6643d19332",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_0206435924b4440892ad",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu sana, {{display_name}}. 🙏\n\nKila asubuhi nikiwaka, nakuwanga na wazo moja, nita make sure aje maisha ya mwananchi iko fiti kuliko jana?\n\nHapa ndio hio stori inapigwa. Kukuwe wewe ni mkulima, mdosi wa biz, mrazi, au msee tu anataka kujua form, hapa ndio home.\n\nNikusaidie na nini leo?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_14b796ffbf9144ea9573",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_3c88663de44a4a35aa25",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_a639f70730d84130b547"
+          },
+          {
+            "id": "itm_m_06c98b4d529146d19348",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_ebc35a89768447a9b25e"
+          },
+          {
+            "id": "itm_m_fa76ab694bf84a158b45",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_dea25871365f44c1a48d"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2600
+    }
+  },
+  {
+    "id": "grp_grt_a7d9eca9bb0f465eb706",
+    "title": "Sheng Greeting 5",
+    "blocks": [
+      {
+        "id": "blk_txt_7269e6099824467aa1cb",
+        "type": "text",
+        "content": {
+          "richText": [
+            {
+              "id": "p_10e29df6c5884beea0b8",
+              "type": "p",
+              "children": [
+                {
+                  "text": "Karibu, {{display_name}}! 👋\n\nStori ya Kenya inaandikwa sahii, na wewe uko ndani ya mpango.\n\nKukuwe wewe ni hustler pale Gikomba, mkulima wa Rift Valley, mrazi wa Kisumu, au mama fua anapiga biz yake, hii serikali inakufanyia kazi.\n\nWacha nikuonyeshe form inasonga aje. Niulize swali yoyote. 🇰🇪"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "blk_menu_97e1110e91f24bb589a2",
+        "type": "choice input",
+        "items": [
+          {
+            "id": "itm_m_c7168bb02b5e4ff1b741",
+            "content": "🔥 Form Ya Leo",
+            "outgoingEdgeId": "edg_5bcd4a515f1e42e4b8ad"
+          },
+          {
+            "id": "itm_m_db620d586dfd4e42abe3",
+            "content": "📍 Miradi Mtaani",
+            "outgoingEdgeId": "edg_8496c7cd4cc548bdbe51"
+          },
+          {
+            "id": "itm_m_06d7e2cf3b054d1e9bd2",
+            "content": "💬 Uliza Swali",
+            "outgoingEdgeId": "edg_35a02f6c32a44bfcbc93"
+          }
+        ],
+        "options": {
+          "variableId": "var_top1ab5fa2a51ed47d8b5"
+        }
+      }
+    ],
+    "graphCoordinates": {
+      "x": 800,
+      "y": 2800
+    }
+  },
+  {
+    "id": "grp_rt_0efcee40d5a8402784a6",
+    "title": "Sheng Router",
+    "blocks": [
+      {
+        "id": "blk_cond_5a7d09fdfd7f4ffa83e5",
+        "type": "Condition",
+        "items": [
+          {
+            "id": "itm_cond_b648cae7801b465485ff",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_e64faa0e69d347508aeb",
+                  "value": "1",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_f3bda043a66f476dbcdf"
+          },
+          {
+            "id": "itm_cond_949aa66abc484987a3f6",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_9b3326fdfee74bc18815",
+                  "value": "2",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_63b528f4192142bb9ce4"
+          },
+          {
+            "id": "itm_cond_c071baa1498d4443a8dc",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_556f3b376dff4cb39aad",
+                  "value": "3",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_6ffe473a285242feaa27"
+          },
+          {
+            "id": "itm_cond_e0bc6efea24347468d08",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_1dbfa62f71224ff59b70",
+                  "value": "4",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_3f2b12ab149541f6bd07"
+          },
+          {
+            "id": "itm_cond_d1c659ab8e0d4729b3ba",
+            "content": {
+              "comparisons": [
+                {
+                  "id": "comp_1b330c02b0814e0abb4f",
+                  "value": "5",
+                  "variableId": "var_grt_idxedc14a8436954e",
+                  "comparisonOperator": "Equal to"
+                }
+              ],
+              "logicalOperator": "AND"
+            },
+            "outgoingEdgeId": "edg_715fe060872d47a58e2f"
+          }
+        ]
+      }
+    ],
+    "graphCoordinates": {
+      "x": 400,
+      "y": 2000
+    }
+  }
+]

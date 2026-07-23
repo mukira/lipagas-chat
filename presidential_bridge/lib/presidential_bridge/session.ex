@@ -47,6 +47,21 @@ defmodule PresidentialBridge.Session do
     Redix.command(:redix, ["DEL", "pres_greeting:#{conv_id}"])
   end
 
+  # ─── Persistent Language Preference (per phone, permanent) ───────────────
+
+  def get_language(phone) do
+    case Redix.command(:redix, ["GET", "pres_lang:#{phone}"]) do
+      {:ok, nil}  -> nil
+      {:ok, val}  -> val
+      {:error, _} -> nil
+    end
+  end
+
+  def set_language(phone, lang) do
+    # NO TTL — this is permanent until user explicitly changes language
+    Redix.command(:redix, ["SET", "pres_lang:#{phone}", lang])
+  end
+
   # ─── Dynamic Button Mapping (Typebot Schema Cache) ───────────────────
 
   def get_button_mapping(slug) do

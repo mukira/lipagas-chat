@@ -3,8 +3,7 @@ defmodule PresidentialBridge.HTTP do
   Lightweight HTTP client built on Mint.
   Works on OTP 24 (unlike Finch 0.16+ which requires OTP 25).
   """
-
-  @timeout 30_000
+  @timeout 120_000
 
   # ─── GET request ──────────────────────────────────────────────────────
 

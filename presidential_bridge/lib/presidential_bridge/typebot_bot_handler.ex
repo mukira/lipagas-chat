@@ -39,19 +39,70 @@ defmodule PresidentialBridge.TypebotBotHandler do
     msg_lower = String.downcase(String.trim(content))
 
     meta = Map.get(@inbox_meta, inbox_id)
-    unless meta && phone && phone != "" do
+    if is_nil(meta) or is_nil(phone) or phone == "" do
       IO.puts("[TypebotBotHandler] Missing meta config for inbox_id=#{inbox_id} or phone. Skipping.")
-      return()
-    end
+    else
+      # --- INTERCEPTOR: Projects Near Me Location Input ---
+      awaiting = Redix.command!(:redix, ["GET", "awaiting_location:#{phone}"]) == "true"
+      
+      is_projects_btn = msg_lower in [
+        "📍 projects near me", 
+        "📍 miradi karibu nami", 
+        "📍 projects area yangu",
+        "projects near me",
+        "miradi karibu nami",
+        "projects area yangu"
+      ]
 
-    IO.puts("[TypebotBotHandler] conv_id=#{conv_id} inbox=#{inbox_id} phone=#{phone} msg=#{inspect(content)}")
+      cond do
+        awaiting and msg_lower not in @reset_keywords ->
+          IO.puts("[TypebotBotHandler] Intercepting location: #{content}")
+          Redix.command!(:redix, ["DEL", "awaiting_location:#{phone}"])
+          
+          persistent_lang = Session.get_language(phone) || "english"
+          lang = cond do
+            persistent_lang =~ "Kiswahili" -> "kiswahili"
+            persistent_lang =~ "Sheng" -> "sheng"
+            true -> "english"
+          end
 
-    button_mapping = build_dynamic_button_mapping(slug)
-    matched_btn = Map.get(button_mapping, msg_lower)
-    is_deep_switch = not is_nil(matched_btn)
+          wait_msg = cond do
+            lang == "kiswahili" -> "🔍 Natafuta miradi karibu nawe..."
+            lang == "sheng" -> "🔍 Nacheki ma-project area yako..."
+            true -> "🔍 Searching for projects near you..."
+          end
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: wait_msg}}, meta)
+          
+          Task.start(fn ->
+            result_text = PresidentialBridge.ProjectSearch.search(content, lang)
+            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: result_text}}, meta)
+            
+            # Reset Typebot back to Main Menu silently
+            do_handle(Map.put(payload, "content", "Ruto"), slug)
+          end)
 
-    # Reset session on keywords or deep switch
-    if msg_lower in @reset_keywords or is_deep_switch do
+        is_projects_btn ->
+          IO.puts("[TypebotBotHandler] Intercepting Projects button click")
+          Redix.command!(:redix, ["SET", "awaiting_location:#{phone}", "true", "EX", "300"])
+          
+          persistent_lang = Session.get_language(phone) || "english"
+          prompt_text = cond do
+            persistent_lang =~ "Kiswahili" -> "🌍 Uko wapi? Tafadhali andika jina la mji, wilaya, au kaunti yako:"
+            persistent_lang =~ "Sheng" -> "🌍 Uko area gani? Type jina ya tao, mtaa, ama county yako:"
+            true -> "🌍 Where are you located? Please type your town, district, or county:"
+          end
+          
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
+
+        true ->
+          IO.puts("[TypebotBotHandler] conv_id=#{conv_id} inbox=#{inbox_id} phone=#{phone} msg=#{inspect(content)}")
+
+          button_mapping = build_dynamic_button_mapping(slug)
+          matched_btn = Map.get(button_mapping, msg_lower)
+          is_deep_switch = not is_nil(matched_btn)
+
+          # Reset session on keywords or deep switch
+          if msg_lower in @reset_keywords or is_deep_switch do
       if msg_lower == "exit" do
         IO.puts("[TypebotBotHandler] Exit keyword received — clearing greeting cache for conv #{conv_id}")
         Session.delete_greeting(conv_id)
@@ -74,7 +125,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
             {:ok, lang_msgs, lang_input} ->
               if topic_str do
                 case Typebot.continue_chat(new_session_id, topic_str) do
-                  {:ok, topic_msgs, topic_input} -> {topic_msgs, topic_input}
+                  {:ok, topic_msgs, topic_input} -> 
+                    IO.inspect(topic_msgs, label: "DEBUG DEEP SWITCH TOPIC MSGS")
+                    {topic_msgs, topic_input}
                   _ -> {lang_msgs, lang_input}
                 end
               else
@@ -84,13 +137,25 @@ defmodule PresidentialBridge.TypebotBotHandler do
               {first_msgs, first_input}
           end
         else
-          {first_msgs, first_input}
+          persistent_lang = Session.get_language(phone)
+          should_fast_forward = not is_nil(persistent_lang)
+          
+          if should_fast_forward and new_session_id do
+            IO.puts("[TypebotBotHandler] Fast-forwarding persistent language: #{persistent_lang}")
+            case Typebot.continue_chat(new_session_id, persistent_lang) do
+              {:ok, lang_msgs, lang_input} -> {lang_msgs, lang_input}
+              _ -> {first_msgs, first_input}
+            end
+          else
+            {first_msgs, first_input}
+          end
         end
       else
         continue_session(conv_id, session_id, slug, content, payload)
       end
 
-    send_whatsapp_response(phone, meta, messages, input, conv_id)
+      send_whatsapp_response(phone, meta, messages, input, conv_id)
+    end
   rescue
     e ->
       IO.puts("[TypebotBotHandler] Error: #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
@@ -136,12 +201,40 @@ defmodule PresidentialBridge.TypebotBotHandler do
       end
     end
 
+    # Dynamic Buttons & Summaries (Fetch from the 48-language JSON map in Redis)
+    dynamic_translations = case Redix.command(:redix, ["GET", "dynamic_news_translations"]) do
+      {:ok, val} when is_binary(val) and val != "" -> 
+        case Jason.decode(val) do
+          {:ok, json} -> json
+          _ -> %{}
+        end
+      _ -> %{}
+    end
+
+    en_data = Map.get(dynamic_translations, "english", %{})
+    sw_data = Map.get(dynamic_translations, "kiswahili", %{})
+    sh_data = Map.get(dynamic_translations, "sheng", %{})
+
+    dynamic_btn_en = Map.get(en_data, "button", "News")
+    dynamic_btn_sw = Map.get(sw_data, "button", "Habari")
+    dynamic_btn_sh = Map.get(sh_data, "button", "Riba")
+
+    dynamic_summary_en = Map.get(en_data, "summary", "")
+    dynamic_summary_sw = Map.get(sw_data, "summary", "")
+    dynamic_summary_sh = Map.get(sh_data, "summary", "")
+
     prefilled_vars = %{
       "user_name" => user_name,
       "display_name" => display_name,
       "phone_number" => phone,
       "latest_news" => latest_news,
-      "greeting_index" => greeting_index
+      "greeting_index" => to_string(greeting_index),
+      "dynamic_btn_en" => dynamic_btn_en,
+      "dynamic_btn_sw" => dynamic_btn_sw,
+      "dynamic_btn_sh" => dynamic_btn_sh,
+      "dynamic_summary" => dynamic_summary_en,
+      "dynamic_summary_sw" => dynamic_summary_sw,
+      "dynamic_summary_sh" => dynamic_summary_sh
     }
     IO.puts("[TypebotBotHandler] prefilled_vars: #{inspect(prefilled_vars)}")
 
@@ -156,6 +249,15 @@ defmodule PresidentialBridge.TypebotBotHandler do
   end
 
   defp continue_session(conv_id, session_id, slug, content, payload) do
+    phone = extract_phone(payload)
+    content_lower = String.downcase(String.trim(content))
+    
+    # Save persistent language if they clicked a language button
+    if content_lower in ["🇬🇧 english", "🇰🇪 kiswahili", "😎 sheng"] do
+      Session.set_language(phone, content)
+      IO.puts("[TypebotBotHandler] Saved persistent language for #{phone}: #{content}")
+    end
+
     IO.puts("[TypebotBotHandler] Calling Typebot.continue_chat for session: #{session_id}")
     case Typebot.continue_chat(session_id, content) do
       {:ok, messages, input} ->
@@ -213,11 +315,53 @@ defmodule PresidentialBridge.TypebotBotHandler do
             # Use original as ID so the exact string goes back to Typebot
             %{type: "reply", reply: %{id: String.slice(original, 0, 256), title: title}}
           end)
+          
+          # --- ROBUST INTERCEPTOR: Typebot engine drops the variable if it contains complex markdown ---
+          # If this is the News interactive block, fetch the text directly from Redis to ensure we never get a blank text.
+          buttons_list = Enum.map(input["items"] || [], & &1["content"])
+          text = cond do
+            "📄 Read Full Updates" in buttons_list ->
+              raw_redis = Redix.command!(:redix, ["GET", "dynamic_news_translations"]) || "{}"
+              json = Jason.decode!(raw_redis)
+              Map.get(Map.get(json, "english", %{}), "summary", text)
+            "📄 Soma Taarifa Kamili" in buttons_list ->
+              raw_redis = Redix.command!(:redix, ["GET", "dynamic_news_translations"]) || "{}"
+              json = Jason.decode!(raw_redis)
+              Map.get(Map.get(json, "kiswahili", %{}), "summary", text)
+            "📄 Cheki Rada Yote" in buttons_list ->
+              raw_redis = Redix.command!(:redix, ["GET", "dynamic_news_translations"]) || "{}"
+              json = Jason.decode!(raw_redis)
+              Map.get(Map.get(json, "sheng", %{}), "summary", text)
+            "⬅️ Back to Main Menu" in buttons_list ->
+              Redix.command!(:redix, ["GET", "dynamic_full_news_en"]) || text
+            "⬅️ Rudi Nyuma" in buttons_list ->
+              Redix.command!(:redix, ["GET", "dynamic_full_news_sw"]) || text
+            "⬅️ Rudi Base" in buttons_list ->
+              Redix.command!(:redix, ["GET", "dynamic_full_news_sh"]) || text
+            true -> text
+          end
+
+          # Format text for WhatsApp: The LLM generates standard markdown (`**Text**`), but WhatsApp uses `*Text*`.
+          # We simply replace double asterisks with single asterisks.
+          formatted_text = String.replace(text, "**", "*")
+
+          fallback = if Enum.any?(buttons_list, &String.contains?(&1, "⬅️")), do: "What would you like to do next?", else: "Please choose:"
+
+          # WhatsApp interactive body text limit is 1024. If it's too big, fallback.
+          body_text = if String.length(formatted_text) > 1000 do
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_text}}, meta)
+             fallback
+          else
+             if(formatted_text != "", do: formatted_text, else: fallback)
+          end
+
           interactive = %{
             type: "button",
-            body: %{text: if(text != "", do: text, else: "Please choose:")},
+            body: %{text: body_text},
             action: %{buttons: buttons}
           }
+          IO.inspect(buttons, label: "DEBUG BUTTONS")
+          IO.inspect(interactive, label: "DEBUG INTERACTIVE")
           interactive = if image_url do
             Map.put(interactive, :header, %{type: "image", image: %{link: image_url}})
           else
@@ -229,12 +373,20 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_map(input) and input["type"] == "choice input" and
         length(input["items"] || []) > 3 ->
           items = input["items"] || []
+          
           rows = items |> Enum.take(10) |> Enum.with_index() |> Enum.map(fn {item, i} ->
             original = String.trim(item["content"] || item["label"] || "Option #{i+1}")
             title = String.slice(original, 0, 24)
             %{id: String.slice(original, 0, 200), title: title}
           end)
-          body_text = if text != "", do: text, else: "Please choose:"
+          
+          body_text = if String.length(text) > 1000 do
+            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta)
+            "Please choose:"
+          else
+            if(text != "", do: text, else: "Please choose:")
+          end
+
           send_meta(%{
             messaging_product: "whatsapp", to: phone, type: "interactive",
             interactive: %{

@@ -11,13 +11,17 @@ defmodule PresidentialBridge.AIProxy do
   """
 
   @groq_keys [
-    "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",
-    "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",
-    "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"
+    System.get_env("GROQ_KEY_1") || "gsk_dummy",
+    System.get_env("GROQ_KEY_2") || "gsk_dummy",
+    System.get_env("GROQ_KEY_3") || "gsk_dummy"
   ]
   @groq_key_count length(@groq_keys)
 
-  @gemini_key "AIzaSyDy03Ybx7gzSJbRlqeYHbKK0L73-XLEq_k"
+  @gemini_keys [
+    System.get_env("GEMINI_KEY_1") || "AQ_dummy",
+    System.get_env("GEMINI_KEY_2") || "AQ_dummy"
+  ]
+  @gemini_key_count length(@gemini_keys)
 
   # Max chars of news context to inject per LLM call (~750 tokens)
   @max_context_chars 3000
@@ -113,26 +117,50 @@ defmodule PresidentialBridge.AIProxy do
       |> Enum.sort_by(fn {_, i} -> rem(i - start_index + @groq_key_count, @groq_key_count) end)
       |> Enum.map(fn {k, _} -> k end)
 
-    try_groq_with_backoff(prompt, user_message, keys_in_order, 0)
+    try_groq_with_backoff(prompt, user_message, keys_in_order, 0, false)
   end
 
-  defp try_groq_with_backoff(_prompt, _msg, [], _attempt), do: {:error, :all_keys_exhausted}
+  # Public entry point for DataMiner to fetch JSON
+  def call_groq_json_round_robin(prompt, user_message \\ "") do
+    start_index = Agent.get_and_update(:groq_key_index, fn idx ->
+      next = rem(idx + 1, @groq_key_count)
+      {idx, next}
+    end)
 
-  defp try_groq_with_backoff(prompt, user_message, [key | rest], attempt) do
+    keys_in_order = @groq_keys
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {_, i} -> rem(i - start_index + @groq_key_count, @groq_key_count) end)
+      |> Enum.map(fn {k, _} -> k end)
+
+    try_groq_with_backoff(prompt, user_message, keys_in_order, 0, true)
+  end
+
+  defp try_groq_with_backoff(_prompt, _msg, [], _attempt, _json_mode), do: {:error, :all_keys_exhausted}
+
+  defp try_groq_with_backoff(prompt, user_message, [key | rest], attempt, json_mode) do
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = [
       {"Authorization", "Bearer #{key}"},
       {"Content-Type", "application/json"}
     ]
-    body = %{
-      model: "llama-3.3-70b-versatile",
-      messages: [
+    
+    messages = if user_message == "" do
+      [%{role: "user", content: prompt}]
+    else
+      [
         %{role: "system", content: prompt},
         %{role: "user", content: user_message}
-      ],
+      ]
+    end
+
+    body = %{
+      model: "llama-3.3-70b-versatile",
+      messages: messages,
       temperature: 0.7,
-      max_tokens: 150
+      max_tokens: 300
     }
+    
+    body = if json_mode, do: Map.put(body, :response_format, %{type: "json_object"}), else: body
 
     case PresidentialBridge.HTTP.post_json(url, body, headers) do
       {:ok, %{status: 200, body: resp_body}} ->
@@ -144,34 +172,66 @@ defmodule PresidentialBridge.AIProxy do
         backoff_ms = round(:math.pow(2, attempt) * 1000)
         IO.puts("[AIProxy] Groq key #{attempt + 1} rate-limited (429). Backoff #{backoff_ms}ms...")
         Process.sleep(backoff_ms)
-        try_groq_with_backoff(prompt, user_message, rest, attempt + 1)
+        try_groq_with_backoff(prompt, user_message, rest, attempt + 1, json_mode)
 
       {:ok, %{status: status}} ->
         IO.puts("[AIProxy] Groq key #{attempt + 1} returned #{status}. Trying next key.")
-        try_groq_with_backoff(prompt, user_message, rest, attempt + 1)
+        try_groq_with_backoff(prompt, user_message, rest, attempt + 1, json_mode)
 
       {:error, reason} ->
         IO.puts("[AIProxy] Groq key #{attempt + 1} error: #{inspect(reason)}. Trying next key.")
-        try_groq_with_backoff(prompt, user_message, rest, attempt + 1)
+        try_groq_with_backoff(prompt, user_message, rest, attempt + 1, json_mode)
     end
   end
 
-  # ─── Gemini Fallback ───────────────────────────────────────────────────────
+  # ─── Gemini Fallback & Translator ──────────────────────────────────────────
 
-  defp try_gemini(prompt, user_message) do
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=#{@gemini_key}"
-    full_prompt = prompt <> "\n\n" <> user_message
+  def call_gemini_round_robin(prompt) do
+    start_index = Agent.get_and_update(:gemini_key_index, fn idx ->
+      next = rem(idx + 1, @gemini_key_count)
+      {idx, next}
+    end)
 
-    body = %{
-      contents: [%{parts: [%{text: full_prompt}]}]
-    }
+    keys_in_order = @gemini_keys
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {_, i} -> rem(i - start_index + @gemini_key_count, @gemini_key_count) end)
+      |> Enum.map(fn {k, _} -> k end)
+
+    try_gemini_with_backoff(prompt, keys_in_order, 0)
+  end
+
+  defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}
+
+  defp try_gemini_with_backoff(prompt, [key | rest], attempt) do
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=#{key}"
+    body = %{contents: [%{parts: [%{text: prompt}]}]}
 
     case PresidentialBridge.HTTP.post_json(url, body, []) do
       {:ok, %{status: 200, body: resp_body}} ->
         reply = get_in(resp_body, ["candidates", Access.at(0), "content", "parts", Access.at(0), "text"])
-        {:ok, reply || "I'm currently unable to process your request."}
-      _ ->
-        {:error, "Gemini fallback failed."}
+        {:ok, reply || ""}
+      
+      {:ok, %{status: 429}} ->
+        backoff_ms = round(:math.pow(2, attempt) * 1000)
+        IO.puts("[AIProxy] Gemini key #{attempt + 1} rate-limited (429). Backoff #{backoff_ms}ms...")
+        Process.sleep(backoff_ms)
+        try_gemini_with_backoff(prompt, rest, attempt + 1)
+
+      {:ok, %{status: status}} ->
+        IO.puts("[AIProxy] Gemini key #{attempt + 1} returned #{status}. Trying next key.")
+        try_gemini_with_backoff(prompt, rest, attempt + 1)
+        
+      {:error, reason} ->
+        IO.puts("[AIProxy] Gemini key #{attempt + 1} error: #{inspect(reason)}. Trying next key.")
+        try_gemini_with_backoff(prompt, rest, attempt + 1)
+    end
+  end
+
+  defp try_gemini(prompt, user_message) do
+    full_prompt = prompt <> "\n\n" <> user_message
+    case call_gemini_round_robin(full_prompt) do
+      {:ok, reply} when reply != "" -> {:ok, reply}
+      _ -> {:error, "Gemini fallback failed."}
     end
   end
 

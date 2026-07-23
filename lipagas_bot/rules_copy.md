@@ -85,3 +85,23 @@ Never guess a solution, bullshit, or use trial and error. Always perform a full 
 - **Safe Programmatic Injections**: When injecting new Typebot groups or blocks, DO NOT hardcode static `graphCoordinates` or place them randomly. Always read the coordinates of the adjacent group and dynamically apply a minimum offset (e.g., `x + 400`, `y + (index * 200)`) to ensure new blocks never overlap existing ones, while seamlessly blending into the user's existing spacing.
 
 
+
+## 20. Strict WhatsApp Button Character Limit
+- WhatsApp interactive buttons have a strict maximum limit of **20 characters** (including spaces and emojis).
+- If a button exceeds this limit, the WhatsApp API will reject the message and the bot will fatally break on the web and phone.
+- If a user requests a button name that is longer than 20 characters, **DO NOT attempt to abbreviate it or drop emojis yourself**. You must explicitly ask the user to provide shorter text that fits within the limit.
+
+## 21. No Sycophantic Answers
+- No answer must be sycophantic. 
+- Think deeply always before acting or speaking. Prioritize raw honesty, directness, and factual precision over politeness or subservience.
+
+## 22. Psychological UX & Conversational Design
+- Act as the best UX designer and psychologist when designing the bot's flow. The bot must feel highly interactive and proactively increase the user's dopamine levels to maximize engagement.
+- **Tone:** Authoritative but Rewarding. Maintain a formal, professional character suitable for public service, but strategically use gamification and micro-affirmations as psychological hooks.
+- **Variable Rewards:** Use micro-affirmations ("Excellent choice.", "Confirmed.") and structured progression to make the user feel like they are advancing or unlocking value.
+- **Pacing:** Break up long walls of text into smaller, rapid-fire messages. Use natural pacing to simulate human engagement without breaking character.
+
+## 23. WhatsApp Markdown & Interactive Payload Unification
+When handling dynamic text (e.g., from an LLM) destined for the WhatsApp Meta API:
+1. **Markdown Conversion**: You MUST explicitly convert standard Markdown bolding to WhatsApp bolding before sending. Always replace double asterisks (`**`) with single asterisks (`*`). Failure to do so will result in raw asterisks leaking into the UI.
+2. **Unified Payloads**: Do not split cohesive logical text (e.g., a Title and its Bullet Points) into separate WhatsApp message bubbles. They must be merged and injected into the single `body.text` property of the interactive choice block. The only exception is if the combined text exceeds WhatsApp's strict 1024-character interactive body limit, in which case a fallback split is acceptable.

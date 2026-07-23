@@ -16,6 +16,12 @@ defmodule PresidentialBridge.Application do
         start: {Agent, :start_link, [fn -> 0 end, [name: :groq_key_index]]}
       },
 
+      # Gemini key rotation Agent
+      %{
+        id: :gemini_key_index,
+        start: {Agent, :start_link, [fn -> 0 end, [name: :gemini_key_index]]}
+      },
+
       # Inactivity timer GenServer — supervised, survives crashes
       PresidentialBridge.InactivityTimer,
 

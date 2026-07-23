@@ -3,8 +3,7 @@ defmodule PresidentialBridge.DataMiner do
   require Logger
 
   @apify_key  "apify_api_s8ED1751q9pWXuBO6vvhiorRHAn2og2GHHPe"
-  @serper_key "437b1209e93d91f3bd678059ef82512cce7dd619"
-  @gemini_key "AIzaSyDy03Ybx7gzSJbRlqeYHbKK0L73-XLEq_k"
+  @serper_key System.get_env("SERPER_API_KEY") || ""
   @pr_whatsapp_number "254723539760"
 
   # ─── Timers ────────────────────────────────────────────────────────────────
@@ -182,12 +181,136 @@ defmodule PresidentialBridge.DataMiner do
 
     Redix.command(:redix, ["SET", "presidential_context", merged])
     Logger.info("[DataMiner] presidential_context updated (#{byte_size(merged)} chars total).")
+    
+    # Generate dynamic buttons based on the new context
+    Task.start(fn -> generate_dynamic_buttons(merged) end)
   end
 
   defp redis_get(key, default) do
     case Redix.command(:redix, ["GET", key]) do
       {:ok, val} when is_binary(val) -> val
       _ -> default
+    end
+  end
+
+  defp generate_dynamic_buttons(merged_context) do
+    Logger.info("[DataMiner] Step 1: Generating English summary using Groq...")
+    
+    groq_prompt = """
+    You are an expert PR copywriter for the President of Kenya. Based on the following news context, write:
+    1. "en_button": A short punchy English label starting with ONE emoji (under 20 chars).
+    2. "summary_en": High-level positive headlines about what the President has done, strictly formatted as follows:
+       - One main title at the very top (using WhatsApp-native bold formatting, e.g., *Main Title*).
+       - A list of bullet points, where each bullet point has its own bold title and a brief summary (maximum 1 short sentence per bullet point).
+       Do not include any other text.
+    3. "full_news_en": A detailed, well-formatted PR update about the President's actions.
+       - Use a main title at the top.
+       - Use bullet points with bold headers (e.g., *Header*: description).
+       - Use clear separators.
+       - Do NOT mention any source names (like Nation, KBC, X, Twitter).
+       - The language must sound like highly positive achievements (e.g., "The President has...").
+    
+    Respond ONLY with a valid JSON object matching the exact keys: "en_button", "summary_en", "full_news_en".
+    
+    News Context:
+    #{merged_context}
+    """
+
+    case PresidentialBridge.AIProxy.call_groq_json_round_robin(groq_prompt) do
+      {:ok, groq_json_str} ->
+        # Clean JSON block if wrapped in markdown just in case
+        cleaned_groq = groq_json_str |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+        
+        case Jason.decode(cleaned_groq) do
+          {:ok, groq_json} ->
+            Logger.info("[DataMiner] Step 2: Translating summary into 48 languages using Gemini...")
+            gemini_prompt = """
+            You are an expert translator specializing in ALL Kenyan ethnic languages.
+            I have an English button and a summary composed of a main title and bullet points. I need you to translate them into 48 Kenyan languages, including but not limited to:
+            Kiswahili, Sheng, Kikuyu, Luo, Kalenjin, Kamba, Gusii, Meru, Mijikenda, Somali, Turkana, Maasai, Embu, Taita, Pokot, Kuria, Borana, Rendille, Samburu, etc.
+            
+            Button constraints: MUST start with ONE emoji, MUST be under 20 chars total.
+            Summary constraints: Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and strictly 1 short sentence per bullet point summary).
+            
+            Input JSON:
+            #{Jason.encode!(groq_json)}
+            
+            Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary".
+            Example:
+            {
+              "english": {"button": "...", "summary": "..."},
+              "kiswahili": {"button": "...", "summary": "..."},
+              "sheng": {"button": "...", "summary": "..."},
+              "kikuyu": {"button": "...", "summary": "..."},
+              "luo": {"button": "...", "summary": "..."}
+            }
+            Do this for as many Kenyan languages as possible (aim for 48).
+            """
+            
+            case PresidentialBridge.AIProxy.call_gemini_round_robin(gemini_prompt) do
+              {:ok, reply} ->
+                cleaned_json = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+                
+                case Jason.decode(cleaned_json) do
+                  {:ok, gemini_json} ->
+                    # Inject the English original so it's always there
+                    final_map = Map.put(gemini_json, "english", %{
+                      "button" => groq_json["en_button"] || "",
+                      "summary" => groq_json["summary_en"] || ""
+                    })
+                    
+                    Redix.command(:redix, ["SET", "dynamic_news_translations", Jason.encode!(final_map)])
+                    
+                    # Keep backward compatibility for the existing 3 groups to not break the Typebot immediately
+                    sw_data = Map.get(gemini_json, "kiswahili", %{})
+                    sh_data = Map.get(gemini_json, "sheng", %{})
+                    Redix.command(:redix, ["SET", "dynamic_btn_en", groq_json["en_button"] || ""])
+                    Redix.command(:redix, ["SET", "dynamic_btn_sw", Map.get(sw_data, "button", "Swahili Update")])
+                    Redix.command(:redix, ["SET", "dynamic_btn_sh", Map.get(sh_data, "button", "Sheng Update")])
+                    Redix.command(:redix, ["SET", "dynamic_summary", groq_json["summary_en"] || ""])
+                    Redix.command(:redix, ["SET", "dynamic_summary_sw", Map.get(sw_data, "summary", "")])
+                    Redix.command(:redix, ["SET", "dynamic_summary_sh", Map.get(sh_data, "summary", "")])
+                    
+                    Logger.info("[DataMiner] 48-Language Dynamic translations saved successfully.")
+
+                    # --- Step 3: Translate Full News separately to avoid Gemini timeouts ---
+                    Logger.info("[DataMiner] Step 3: Translating Full News into Swahili and Sheng...")
+                    full_news_prompt = """
+                    You are an expert translator specializing in Kenyan languages.
+                    Translate the following highly-positive PR update into Kiswahili and Sheng.
+                    Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and clear separators).
+                    
+                    Text to translate:
+                    #{groq_json["full_news_en"] || "No updates available."}
+                    
+                    Respond ONLY with a valid JSON object matching the keys: "full_news_sw", "full_news_sh".
+                    """
+                    
+                    case PresidentialBridge.AIProxy.call_gemini_round_robin(full_news_prompt) do
+                      {:ok, full_news_reply} ->
+                        cleaned_fn = full_news_reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+                        case Jason.decode(cleaned_fn) do
+                          {:ok, fn_json} ->
+                            Redix.command(:redix, ["SET", "dynamic_full_news_en", groq_json["full_news_en"] || ""])
+                            Redix.command(:redix, ["SET", "dynamic_full_news_sw", fn_json["full_news_sw"] || ""])
+                            Redix.command(:redix, ["SET", "dynamic_full_news_sh", fn_json["full_news_sh"] || ""])
+                            Logger.info("[DataMiner] Full News translations saved successfully.")
+                          _ -> Logger.error("[DataMiner] Failed to decode Full News JSON: #{cleaned_fn}")
+                        end
+                      _ -> Logger.error("[DataMiner] Full News Gemini translation failed.")
+                    end
+
+                  _ ->
+                    Logger.error("[DataMiner] Failed to decode Gemini 48-lang JSON: #{cleaned_json}")
+                end
+              _ ->
+                Logger.error("[DataMiner] Gemini translation failed.")
+            end
+            
+          _ -> Logger.error("[DataMiner] Failed to decode Groq JSON: #{groq_json_str}")
+        end
+      {:error, reason} ->
+        Logger.error("[DataMiner] Groq generation failed: #{inspect(reason)}")
     end
   end
 
@@ -235,12 +358,8 @@ defmodule PresidentialBridge.DataMiner do
     #{summary}
     """
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=#{@gemini_key}"
-    body = %{contents: [%{parts: [%{text: prompt}]}]}
-
-    case PresidentialBridge.HTTP.post_json(url, body, []) do
-      {:ok, %{status: 200, body: resp_body}} ->
-        reply = get_in(resp_body, ["candidates", Access.at(0), "content", "parts", Access.at(0), "text"]) || ""
+    case PresidentialBridge.AIProxy.call_gemini_round_robin(prompt) do
+      {:ok, reply} ->
         if String.contains?(String.upcase(reply), "NEGATIVE") do
           alert_pr_team(summary)
         else
