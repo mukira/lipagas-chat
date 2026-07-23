@@ -40,7 +40,7 @@ defmodule PresidentialBridge.ProjectSearch do
     Respond ONLY with the exact search query string. Do not include quotes or any other text.
     """
 
-    case PresidentialBridge.AIProxy.call_groq(prompt) do
+    case PresidentialBridge.AIProxy.call_groq_round_robin(prompt) do
       {:ok, query} -> String.trim(query) |> String.replace("\"", "")
       _ -> "President Ruto development projects in #{location} Kenya"
     end
@@ -90,7 +90,7 @@ defmodule PresidentialBridge.ProjectSearch do
     #{String.slice(serper_json_str, 0, 3000)}
     """
 
-    case PresidentialBridge.AIProxy.call_groq(prompt) do
+    case PresidentialBridge.AIProxy.call_groq_round_robin(prompt) do
       {:ok, formatted} -> String.trim(formatted)
       _ -> "I'm sorry, I couldn't fetch the projects for your location right now. Please try again later."
     end

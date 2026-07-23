@@ -104,6 +104,10 @@ defmodule PresidentialBridge.AIProxy do
 
   # ─── Round-Robin Groq Rotation ─────────────────────────────────────────────
 
+  def call_groq_round_robin(prompt, user_message \\ "") do
+    try_groq_round_robin(prompt, user_message)
+  end
+
   defp try_groq_round_robin(prompt, user_message) do
     # Get the next key index atomically from the Agent
     start_index = Agent.get_and_update(:groq_key_index, fn idx ->
