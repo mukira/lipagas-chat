@@ -231,9 +231,11 @@ defmodule PresidentialBridge.TypebotBotHandler do
     dynamic_btn_sw = Map.get(sw_data, "button", "Habari")
     dynamic_btn_sh = Map.get(sh_data, "button", "Riba")
 
-    dynamic_summary_en = Map.get(en_data, "summary", "")
-    dynamic_summary_sw = Map.get(sw_data, "summary", "")
-    dynamic_summary_sh = Map.get(sh_data, "summary", "")
+    channel_link = "\n\n📢 *Want to get these updates directly?* Join the President's official WhatsApp Channel here: https://whatsapp.com/channel/0029VbCLeJXJpe8ZJPvxlY05"
+
+    dynamic_summary_en = Map.get(en_data, "summary", "") <> channel_link
+    dynamic_summary_sw = Map.get(sw_data, "summary", "") <> channel_link
+    dynamic_summary_sh = Map.get(sh_data, "summary", "") <> channel_link
 
     prefilled_vars = %{
       "user_name" => user_name,
@@ -321,6 +323,25 @@ defmodule PresidentialBridge.TypebotBotHandler do
         }
         send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta, is_lang_screen)
         PresidentialBridge.Session.set_waiting_location(conv_id, true)
+
+      String.contains?(text, "[SEND_DOCUMENT:") ->
+        # Extract the URL and filename. Expected format: [SEND_DOCUMENT:url|filename]
+        # Example: [SEND_DOCUMENT:https://cdn.link.pdf|Manifesto.pdf]
+        case Regex.run(~r/\[SEND_DOCUMENT:(.*?)\|(.*?)\]/, text) do
+          [full_match, doc_url, doc_name] ->
+            if image_url do
+              send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
+            end
+            send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: %{link: doc_url, filename: doc_name}}, meta, is_lang_screen)
+            
+            # Send any remaining text
+            remaining_text = String.replace(text, full_match, "") |> String.trim()
+            if remaining_text != "" do
+              send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: remaining_text}}, meta, is_lang_screen)
+            end
+          _ ->
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
+        end
 
       # ─── STANDARD TYPEBOT FEATURES ────────────────────────────────────────
       # Choice input with ≤3 items → WhatsApp interactive buttons

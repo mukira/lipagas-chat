@@ -87,17 +87,34 @@ defmodule PresidentialBridge.AIProxy do
           |> String.replace("{{user_language}}", user_language)
           |> String.replace("{{user_topic}}", user_topic)
 
-        # Try Groq with round-robin rotation + exponential backoff
-        case try_groq_round_robin(prompt, user_message) do
-          {:ok, reply} ->
-            # Cache the reply
-            Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
-            IO.puts("[AIProxy] Groq reply cached for #{@cache_ttl}s.")
-            {:ok, reply}
+        # Fetch PDF knowledge from Redis
+        knowledge = case Redix.command(:redix, ["GET", "knowledge:manifesto_scorecard"]) do
+          {:ok, text} when is_binary(text) and text != "" -> text
+          _ -> ""
+        end
 
-          {:error, _reason} ->
-            IO.puts("[AIProxy] All Groq keys exhausted. Falling back to Gemini.")
-            try_gemini(prompt, user_message)
+        if knowledge != "" do
+          IO.puts("[AIProxy] PDF Knowledge found. Bypassing Groq context limits -> Calling Gemini 1.5 Flash.")
+          enhanced_prompt = prompt <> "\n\nCRITICAL KNOWLEDGE BASE (Use this to answer queries precisely):\n" <> knowledge
+          case try_gemini(enhanced_prompt, user_message) do
+            {:ok, reply} ->
+              Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
+              {:ok, reply}
+            err -> err
+          end
+        else
+          # Try Groq with round-robin rotation + exponential backoff if no massive knowledge injected
+          case try_groq_round_robin(prompt, user_message) do
+            {:ok, reply} ->
+              # Cache the reply
+              Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
+              IO.puts("[AIProxy] Groq reply cached for #{@cache_ttl}s.")
+              {:ok, reply}
+
+            {:error, _reason} ->
+              IO.puts("[AIProxy] All Groq keys exhausted. Falling back to Gemini.")
+              try_gemini(prompt, user_message)
+          end
         end
     end
   end
@@ -207,7 +224,7 @@ defmodule PresidentialBridge.AIProxy do
   defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}
 
   defp try_gemini_with_backoff(prompt, [key | rest], attempt) do
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=#{key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=#{key}"
     body = %{contents: [%{parts: [%{text: prompt}]}]}
 
     case PresidentialBridge.HTTP.post_json(url, body, []) do

@@ -1,0 +1,27 @@
+{
+  "id": "grp_ask9d5c99ed0bfd456683",
+  "title": "Ask Question",
+  "blocks": [
+    {
+      "id": "blk_ask_txt24d78aa07a9445",
+      "type": "text",
+      "content": {
+        "richText": [
+          {
+            "id": "p_170e371f6c1e422dadeb223",
+            "type": "p",
+            "children": [
+              {
+                "text": "Go ahead, type your question and I'll get you a verified answer. \ud83c\uddf0\ud83c\uddea"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "graphCoordinates": {
+    "x": 0,
+    "y": 600
+  }
+}
