@@ -106,3 +106,6 @@ Never guess a solution, bullshit, or use trial and error. Always perform a full 
 When handling dynamic text (e.g., from an LLM) destined for the WhatsApp Meta API:
 1. **Markdown Conversion**: You MUST explicitly convert standard Markdown bolding to WhatsApp bolding before sending. Always replace double asterisks (`**`) with single asterisks (`*`). Failure to do so will result in raw asterisks leaking into the UI.
 2. **Unified Payloads**: Do not split cohesive logical text (e.g., a Title and its Bullet Points) into separate WhatsApp message bubbles. They must be merged and injected into the single `body.text` property of the interactive choice block. The only exception is if the combined text exceeds WhatsApp's strict 1024-character interactive body limit, in which case a fallback split is acceptable.
+
+## 24. Linter Validation & Strict Error Catching
+- Before deploying any Typebot flow injection or Elixir bridge update, you MUST execute the typebot_linter.py to verify 100% edge integrity. All code must have explicit error catching (e.g. Try/Catch or case/match statements) to avoid silent failures and trial-and-error debugging.
