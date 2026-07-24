@@ -13,10 +13,10 @@ defmodule PresidentialBridge.HTTP do
 
   # ─── POST request with JSON body ──────────────────────────────────────
 
-  def post_json(url, body_map, headers \\ []) do
+  def post_json(url, body_map, headers \\ [], timeout \\ @timeout) do
     json_body    = Jason.encode!(body_map)
     all_headers  = [{"content-type", "application/json"}, {"content-length", byte_size(json_body)} | headers]
-    do_request(:post, url, all_headers, json_body)
+    do_request(:post, url, all_headers, json_body, 0, timeout)
   end
 
   # ─── PUT request with JSON body ───────────────────────────────────────
@@ -29,7 +29,7 @@ defmodule PresidentialBridge.HTTP do
 
   # ─── Core request ─────────────────────────────────────────────────────
 
-  defp do_request(method, url, headers, body, redirect_count \\ 0) when redirect_count < 5 do
+  defp do_request(method, url, headers, body, redirect_count \\ 0, timeout \\ @timeout) when redirect_count < 5 do
     uri     = URI.parse(url)
     scheme  = String.to_atom(uri.scheme)
     host    = uri.host
@@ -38,9 +38,9 @@ defmodule PresidentialBridge.HTTP do
 
     mint_headers = Enum.map(headers, fn {k, v} -> {to_string(k), to_string(v)} end)
 
-    with {:ok, conn}        <- Mint.HTTP.connect(scheme, host, port, [timeout: @timeout]),
+    with {:ok, conn}        <- Mint.HTTP.connect(scheme, host, port, [timeout: timeout]),
          {:ok, conn, _ref}  <- Mint.HTTP.request(conn, method_str(method), path, mint_headers, body),
-         {:ok, status, resp_headers, resp_body} <- receive_response(conn, @timeout) do
+         {:ok, status, resp_headers, resp_body} <- receive_response(conn, timeout) do
       Mint.HTTP.close(conn)
 
       # Follow 301/302 redirects automatically
@@ -52,7 +52,7 @@ defmodule PresidentialBridge.HTTP do
             nil -> nil
           end
         if location do
-          do_request(method, location, headers, body, redirect_count + 1)
+          do_request(method, location, headers, body, redirect_count + 1, timeout)
         else
           {:error, "Redirect with no Location header"}
         end
@@ -71,7 +71,7 @@ defmodule PresidentialBridge.HTTP do
     e -> {:error, inspect(e)}
   end
 
-  defp do_request(_method, _url, _headers, _body, _count), do: {:error, "Too many redirects"}
+  defp do_request(_method, _url, _headers, _body, _count, _timeout), do: {:error, "Too many redirects"}
 
 
   # ─── Receive all response chunks ──────────────────────────────────────

@@ -20,6 +20,12 @@ defmodule PresidentialBridge.MetaHandler do
       phone = is_map(message) && message["from"]
       if phone do
         text = extract_text(message)
+        
+        # Intercept Language Selection
+        languages = ["Kikuyu", "Dholuo", "Kalenjin", "Kamba", "Luhya", "Somali", "Kisii", "Mijikenda", "Kiswahili", "😎 Sheng"]
+        if text in languages do
+           PresidentialBridge.Session.set_language(phone, text)
+        end
 
         cond do
           # JoyWO bot on dedicated number

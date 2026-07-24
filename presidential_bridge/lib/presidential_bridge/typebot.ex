@@ -6,7 +6,7 @@ defmodule PresidentialBridge.Typebot do
     url = "#{Config.typebot_base_url()}/#{slug}/startChat"
     case HTTP.post_json(url, %{isOnlyRegistering: false, prefilledVariables: prefilled_vars}) do
       {:ok, %{status: 200, body: body}} ->
-        {:ok, body["sessionId"], body["messages"] || [], body["input"]}
+        {:ok, body["sessionId"], body["messages"] || [], body["input"], body["clientSideActions"] || []}
       {:ok, resp} ->
         {:error, "Typebot start #{resp.status}: #{inspect(resp.body)}"}
       {:error, e} ->
@@ -18,7 +18,7 @@ defmodule PresidentialBridge.Typebot do
     url = "#{Config.typebot_continue_url()}/#{session_id}/continueChat"
     case HTTP.post_json(url, %{message: message}) do
       {:ok, %{status: 200, body: body}} ->
-        {:ok, body["messages"] || [], body["input"]}
+        {:ok, body["messages"] || [], body["input"], body["clientSideActions"] || []}
       {:ok, %{status: 404}} ->
         {:error, :session_expired}
       {:ok, resp} ->

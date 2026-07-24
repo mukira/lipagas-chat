@@ -10,6 +10,20 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
   @graph_base "https://graph.facebook.com/v21.0"
   @reset_keywords ~w(reset hi hello start menu back ruto exit)
+  @kenyan_languages [
+    # Bare names (as sent from the secondary Typebot choice list)
+    "kikuyu", "dholuo", "kalenjin", "kamba", "luhya", "somali", "kisii", "mijikenda", 
+    "meru", "turkana", "masai", "maasai", "embu", "taita", "swahili", "kiswahili",
+    "sheng", "pokot", "samburu", "rendille", "borana", "gabra", "orma", "kuria",
+    "mbeere", "tharaka", "sabaot", "pokomo", "tugen", "nandi", "kipsigis", "keiyo",
+    "marakwet", "terik", "sengwer", "ogiek", "yaaku", "el molo", "dahalo", "boni",
+    "njemps", "taveta", "giriama", "digo", "chonyi", "rabai", "jibana", "kambe",
+    "ribe", "kauma", "english",
+    # Emoji-prefixed primary choices
+    "🇬🇧 english", "🇰🇪 kiswahili", "😎 sheng",
+    # Emoji-prefixed secondary (Other) choice
+    "🇰🇪 other"
+  ]
 
   # ─── Inbox → Meta credentials map ────────────────────────────────────
   # Add one entry per WhatsApp inbox that has a bot assigned.
@@ -39,6 +53,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
     msg_lower = String.downcase(String.trim(content))
     user_name = get_in(payload, ["sender", "name"]) || 
                 get_in(payload, ["conversation", "meta", "sender", "name"]) || "Citizen"
+
+    # --- GLOBAL LANGUAGE INTERCEPTOR ---
+    if msg_lower in @kenyan_languages do
+      Session.set_language(phone, content)
+      IO.puts("[TypebotBotHandler] Global intercept: Saved persistent language for #{phone}: #{content}")
+    end
 
     meta = Map.get(@inbox_meta, inbox_id)
     if is_nil(meta) or is_nil(phone) or phone == "" do
@@ -115,48 +135,37 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
     session_id = Session.get_session(conv_id)
 
-    {messages, input} =
+    {messages, input, client_side_actions} =
       if is_nil(session_id) or msg_lower in @reset_keywords or is_deep_switch do
-        {first_msgs, first_input, new_session_id} = start_new_session(conv_id, slug, payload)
+        {first_msgs, first_input, new_session_id, first_csa} = start_new_session(conv_id, slug, payload)
         
         if is_deep_switch and new_session_id do
           [lang_str, topic_str] = matched_btn
           IO.puts("[TypebotBotHandler] Fast-forwarding deep switch: lang=#{lang_str} topic=#{inspect(topic_str)}")
           
           case Typebot.continue_chat(new_session_id, lang_str) do
-            {:ok, lang_msgs, lang_input} ->
+            {:ok, lang_msgs, lang_input, lang_csa} ->
               if topic_str do
                 case Typebot.continue_chat(new_session_id, topic_str) do
-                  {:ok, topic_msgs, topic_input} -> 
+                  {:ok, topic_msgs, topic_input, topic_csa} -> 
                     IO.inspect(topic_msgs, label: "DEBUG DEEP SWITCH TOPIC MSGS")
-                    {topic_msgs, topic_input}
-                  _ -> {lang_msgs, lang_input}
+                    {topic_msgs, topic_input, topic_csa}
+                  _ -> {lang_msgs, lang_input, lang_csa}
                 end
               else
-                {lang_msgs, lang_input}
+                {lang_msgs, lang_input, lang_csa}
               end
             _ ->
-              {first_msgs, first_input}
+              {first_msgs, first_input, first_csa}
           end
         else
-          persistent_lang = Session.get_language(phone)
-          should_fast_forward = not is_nil(persistent_lang)
-          
-          if should_fast_forward and new_session_id do
-            IO.puts("[TypebotBotHandler] Fast-forwarding persistent language: #{persistent_lang}")
-            case Typebot.continue_chat(new_session_id, persistent_lang) do
-              {:ok, lang_msgs, lang_input} -> {lang_msgs, lang_input}
-              _ -> {first_msgs, first_input}
-            end
-          else
-            {first_msgs, first_input}
-          end
+          {first_msgs, first_input, first_csa}
         end
       else
         continue_session(conv_id, session_id, slug, content, payload)
       end
 
-      send_whatsapp_response(phone, meta, messages, input, conv_id)
+      send_whatsapp_response(phone, meta, messages, input, conv_id, client_side_actions)
       end
     end
   rescue
@@ -242,61 +251,67 @@ defmodule PresidentialBridge.TypebotBotHandler do
     IO.puts("[TypebotBotHandler] prefilled_vars: #{inspect(prefilled_vars)}")
 
     case Typebot.start_chat(slug, prefilled_vars) do
-      {:ok, session_id, messages, input} ->
+      {:ok, session_id, messages, input, client_side_actions} ->
         Session.set_session(conv_id, session_id)
-        {messages, input, session_id}
+        {messages, input, session_id, client_side_actions}
       {:error, reason} ->
         IO.puts("[TypebotBotHandler] start_chat failed: #{inspect(reason)}")
-        {[], nil, nil}
+        {[], nil, nil, []}
     end
   end
 
   defp continue_session(conv_id, session_id, slug, content, payload) do
     phone = extract_phone(payload)
     content_lower = String.downcase(String.trim(content))
-    
-    # Save persistent language if they clicked a language button
-    if content_lower in ["🇬🇧 english", "🇰🇪 kiswahili", "😎 sheng"] do
-      Session.set_language(phone, content)
-      IO.puts("[TypebotBotHandler] Saved persistent language for #{phone}: #{content}")
-    end
 
     IO.puts("[TypebotBotHandler] Calling Typebot.continue_chat for session: #{session_id}")
     case Typebot.continue_chat(session_id, content) do
-      {:ok, messages, input} ->
+      {:ok, messages, input, client_side_actions} ->
         IO.puts("[TypebotBotHandler] Typebot responded with messages: #{inspect(messages)} input: #{inspect(input)}")
-        {messages, input}
+        {messages, input, client_side_actions}
       {:error, :session_expired} ->
         IO.puts("[TypebotBotHandler] Session expired for conv #{conv_id}, restarting")
         Session.delete_session(conv_id)
-        {msgs, inp, _id} = start_new_session(conv_id, slug, payload)
-        {msgs, inp}
+        {msgs, inp, _id, csa} = start_new_session(conv_id, slug, payload)
+        {msgs, inp, csa}
       {:error, reason} ->
         IO.puts("[TypebotBotHandler] continue_chat failed: #{inspect(reason)}")
-        {[], nil}
+        {[], nil, []}
     end
   end
 
   # ─── WhatsApp Response Rendering ─────────────────────────────────────
 
-  defp send_whatsapp_response(_phone, _meta, [], nil, _conv_id), do: :ok
-  defp send_whatsapp_response(phone, meta, messages, input, conv_id) do
-    {text, image_url} = Typebot.parse_messages(messages)
+  defp send_whatsapp_response(_phone, _meta, [], nil, _conv_id, _csa), do: :ok
+  defp send_whatsapp_response(phone, meta, messages, input, conv_id, _client_side_actions) do
+    {raw_text, image_url} = Typebot.parse_messages(messages)
+
+    is_bypass_var_set = String.contains?(raw_text, "{{NO_TRANSLATE}}")
+    text = String.replace(raw_text, "{{NO_TRANSLATE}}", "") |> String.trim()
+
+    is_lang_screen = is_bypass_var_set or (is_map(input) and input["type"] == "choice input" and
+      Enum.any?(input["items"] || [], fn i -> 
+        label = i["content"] || i["label"] || ""
+        String.contains?(label, "Sheng") or 
+        String.contains?(label, "Kikuyu") or
+        String.contains?(label, "Dholuo") or
+        String.contains?(label, "Kiswahili")
+      end))
 
     cond do
       # ─── NATIVE META FEATURES ─────────────────────────────────────────────
       String.contains?(text, "SHOW_FLOW:") ->
         if image_url do
-          send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta)
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
         end
         case PresidentialBridge.Interceptor.build_flow_payload(text, phone) do
-          {:ok, flow_payload} -> send_meta(flow_payload, meta)
+          {:ok, flow_payload} -> send_meta(flow_payload, meta, is_lang_screen)
           _ -> :ok
         end
 
       String.contains?(text, "[LOCATION_PROMPT]") ->
         if image_url do
-          send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta)
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
         end
         body_text = String.replace(text, "[LOCATION_PROMPT]", "") |> String.trim()
         interactive = %{
@@ -304,7 +319,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
           body: %{text: body_text},
           action: %{name: "send_location"}
         }
-        send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta)
+        send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta, is_lang_screen)
         PresidentialBridge.Session.set_waiting_location(conv_id, true)
 
       # ─── STANDARD TYPEBOT FEATURES ────────────────────────────────────────
@@ -352,7 +367,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
           # WhatsApp interactive body text limit is 1024. If it's too big, fallback.
           body_text = if String.length(formatted_text) > 1000 do
-             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_text}}, meta)
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_text}}, meta, is_lang_screen)
              fallback
           else
              if(formatted_text != "", do: formatted_text, else: fallback)
@@ -370,7 +385,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
           else
             interactive
           end
-          send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta)
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta, is_lang_screen)
 
       # Choice input with >3 items → WhatsApp list message
       is_map(input) and input["type"] == "choice input" and
@@ -384,7 +399,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
           end)
           
           body_text = if String.length(text) > 1000 do
-            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta)
+            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
             "Please choose:"
           else
             if(text != "", do: text, else: "Please choose:")
@@ -397,22 +412,22 @@ defmodule PresidentialBridge.TypebotBotHandler do
               body: %{text: body_text},
               action: %{button: "View Options", sections: [%{title: "Options", rows: rows}]}
             }
-          }, meta)
+          }, meta, is_lang_screen)
 
       # Image with caption
       image_url != nil and text != "" ->
         send_meta(%{messaging_product: "whatsapp", to: phone, type: "image",
-          image: %{link: image_url, caption: text}}, meta)
+          image: %{link: image_url, caption: text}}, meta, is_lang_screen)
 
       # Image only
       image_url != nil ->
         send_meta(%{messaging_product: "whatsapp", to: phone, type: "image",
-          image: %{link: image_url}}, meta)
+          image: %{link: image_url}}, meta, is_lang_screen)
 
       # Plain text
       text != "" ->
         send_meta(%{messaging_product: "whatsapp", to: phone, type: "text",
-          text: %{body: text}}, meta)
+          text: %{body: text}}, meta, is_lang_screen)
 
       true ->
         :ok
@@ -421,11 +436,24 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
   # ─── Meta Graph API Sender ────────────────────────────────────────────
 
-  defp send_meta(payload, nil) do
-    send_meta(payload, %{phone_number_id: PresidentialBridge.Config.phone_id(), token: PresidentialBridge.Config.meta_token()})
-  end
+  defp send_meta(payload, meta, bypass_translation \\ false) do
+    phone = payload[:to]
+    
+    payload = if is_binary(phone) and phone != "" and not bypass_translation do
+      lang = PresidentialBridge.Session.get_language(phone)
+      if lang && lang not in ["English", "🇬🇧 English"] do
+         translate_meta_payload(payload, lang)
+      else
+         payload
+      end
+    else
+      payload
+    end
 
-  defp send_meta(payload, %{phone_number_id: pid, token: token}) do
+    meta = meta || %{phone_number_id: PresidentialBridge.Config.phone_id(), token: PresidentialBridge.Config.meta_token()}
+    pid = meta.phone_number_id
+    token = meta.token
+
     url = "#{@graph_base}/#{pid}/messages"
     case HTTP.post_json(url, payload, [{"Authorization", "Bearer #{token}"}]) do
       {:ok, %{status: s}} when s in 200..299 ->
@@ -434,6 +462,38 @@ defmodule PresidentialBridge.TypebotBotHandler do
         IO.puts("[TypebotBotHandler] Meta API error: #{resp.status} — #{inspect(resp.body)}")
       {:error, e} ->
         IO.puts("[TypebotBotHandler] HTTP error: #{inspect(e)}")
+    end
+  end
+
+  defp translate_meta_payload(payload, lang) do
+    case payload[:type] do
+      "text" ->
+        if text_body = get_in(payload, [:text, :body]) do
+           translated = PresidentialBridge.Translation.translate(text_body, lang)
+           put_in(payload, [:text, :body], translated)
+        else
+           payload
+        end
+      "interactive" ->
+        interactive = payload[:interactive] || %{}
+        body_text = get_in(interactive, [:body, :text])
+        if body_text do
+           translated = PresidentialBridge.Translation.translate(body_text, lang)
+           interactive = put_in(interactive, [:body, :text], translated)
+           put_in(payload, [:interactive], interactive)
+        else
+           payload
+        end
+      "image" ->
+        caption = get_in(payload, [:image, :caption])
+        if caption do
+           translated = PresidentialBridge.Translation.translate(caption, lang)
+           put_in(payload, [:image, :caption], translated)
+        else
+           payload
+        end
+      _ ->
+        payload
     end
   end
 
@@ -447,7 +507,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
       IO.puts("[TypebotBotHandler] Ghost Simulation: Building dynamic button mapping for #{slug}")
       mapping = %{}
       case Typebot.start_chat(slug, %{"greeting_index" => 1}) do
-        {:ok, _session_id, _messages, input} ->
+        {:ok, _session_id, _messages, input, _csa} ->
           langs = Typebot.get_active_choices(input)
           mapping = Enum.reduce(langs, mapping, fn lang, acc ->
             Map.put(acc, String.downcase(lang), [lang, nil])
@@ -455,9 +515,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           mapping = Enum.reduce(langs, mapping, fn lang, acc ->
             case Typebot.start_chat(slug, %{"greeting_index" => 1}) do
-              {:ok, sid, _, _} ->
+              {:ok, sid, _, _, _} ->
                 case Typebot.continue_chat(sid, lang) do
-                  {:ok, _, topic_input} ->
+                  {:ok, _, topic_input, _} ->
                     topics = Typebot.get_active_choices(topic_input)
                     Enum.reduce(topics, acc, fn topic, inner_acc ->
                       Map.put(inner_acc, String.downcase(topic), [lang, topic])
