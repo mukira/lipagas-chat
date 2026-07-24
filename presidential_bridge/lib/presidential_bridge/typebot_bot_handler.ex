@@ -194,13 +194,13 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
     greeting_index = Session.get_greeting(conv_id)
     greeting_index = if is_nil(greeting_index) do
-      new_idx = Enum.random(1..5)
+      new_idx = Enum.random([1, 2, 4, 5])
       Session.set_greeting(conv_id, Integer.to_string(new_idx))
       new_idx
     else
       case Integer.parse(to_string(greeting_index)) do
         {idx, _} -> idx
-        :error -> Enum.random(1..5)
+        :error -> Enum.random([1, 2, 4, 5])
       end
     end
 

@@ -55,6 +55,7 @@ When working in this directory (`/root/lipagas_bot`), all agents and developers 
 - **DO NOT OPEN BROWSER:** Never open the Typebot Builder browser tab to perform UI edits; all automated edge connections and backend fixes must be implemented permanently without requiring manual browser intervention.
 - **ZERO USER ACTION ITEMS:** The implementation must fix absolutely everything automatically. Never provide "action items" instructing the user to manually connect blocks or draw lines in the UI. All connection lines must be programmatically connected in the backend during implementation. The user's ONLY job is to refresh the page and click Publish.
 - **STRICT ISOLATION:** Any new bot implementation or backend logic must be completely isolated from the LipaGas bot or any other existing bots. No shared routing logic or keyword interception in monolithic scripts. Use physically separate microservices or independent Chatwoot Agent Bot webhooks to ensure a crash in one bot cannot affect another.
+- **DELETE ALL EDITING SCRIPTS (RULE 59):** Any temporary python, shell, or SQL scripts created by agents for the purpose of editing databases, patching JSON payloads, or making surgical modifications MUST be immediately deleted once their execution is successful. Do not leave editing scripts lingering in the repository.
 
 
 ## 16. Bot Reset Keywords Whitelisting
