@@ -97,10 +97,20 @@ defmodule PresidentialBridge.AIProxy do
           IO.puts("[AIProxy] PDF Knowledge found. Bypassing Groq context limits -> Calling Gemini 1.5 Flash.")
           enhanced_prompt = prompt <> "\n\nCRITICAL KNOWLEDGE BASE (Use this to answer queries precisely):\n" <> knowledge
           case try_gemini(enhanced_prompt, user_message) do
-            {:ok, reply} ->
+            {:ok, reply} when is_binary(reply) and reply != "" ->
               Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
               {:ok, reply}
-            err -> err
+            _ ->
+              IO.puts("[AIProxy] Gemini failed for PDF path. Falling back to Groq.")
+              truncated_knowledge = String.slice(knowledge, 0, 2000)
+              groq_prompt = prompt <> "\n\nKNOWLEDGE BASE (summarized):\n" <> truncated_knowledge
+              case try_groq_round_robin(groq_prompt, user_message) do
+                {:ok, reply} ->
+                  Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
+                  {:ok, reply}
+                {:error, _} ->
+                  {:ok, "I'm having trouble connecting right now. Please try again in a moment."}
+              end
           end
         else
           # Try Groq with round-robin rotation + exponential backoff if no massive knowledge injected

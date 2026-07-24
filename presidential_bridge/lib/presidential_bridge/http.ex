@@ -38,7 +38,7 @@ defmodule PresidentialBridge.HTTP do
 
     mint_headers = Enum.map(headers, fn {k, v} -> {to_string(k), to_string(v)} end)
 
-    with {:ok, conn}        <- Mint.HTTP.connect(scheme, host, port, [timeout: timeout]),
+    with {:ok, conn}        <- Mint.HTTP.connect(scheme, host, port, [timeout: timeout, protocols: [:http1]]),
          {:ok, conn, _ref}  <- Mint.HTTP.request(conn, method_str(method), path, mint_headers, body),
          {:ok, status, resp_headers, resp_body} <- receive_response(conn, timeout) do
       Mint.HTTP.close(conn)
