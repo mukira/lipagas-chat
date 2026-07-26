@@ -234,7 +234,7 @@ defmodule PresidentialBridge.AIProxy do
   defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}
 
   defp try_gemini_with_backoff(prompt, [key | rest], attempt) do
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=#{key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=#{key}"
     body = %{contents: [%{parts: [%{text: prompt}]}]}
 
     case PresidentialBridge.HTTP.post_json(url, body, []) do

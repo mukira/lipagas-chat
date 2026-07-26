@@ -357,9 +357,58 @@ defmodule PresidentialBridge.DataMiner do
           _ -> Logger.error("[DataMiner] Failed to decode Groq JSON: #{groq_json_str}")
         end
       {:error, reason} ->
-        Logger.error("[DataMiner] Groq generation failed: #{inspect(reason)}")
-    end
-  end
+        Logger.error("[DataMiner] Groq generation failed: #{inspect(reason)}. Falling back to Gemini...")
+        case PresidentialBridge.AIProxy.call_gemini_round_robin(groq_prompt) do
+          {:ok, gemini_fallback_str} ->
+            cleaned_fallback = gemini_fallback_str |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+            case Jason.decode(cleaned_fallback) do
+              {:ok, fallback_json} ->
+                Logger.info("[DataMiner] Gemini fallback succeeded. Running translation pipeline...")
+                gemini_prompt = """
+                You are an expert translator specializing in ALL Kenyan ethnic languages.
+                I have an English button and a summary composed of a main title and bullet points. I need you to translate them into 48 Kenyan languages, including but not limited to:
+                Kiswahili, Sheng, Kikuyu, Luo, Kalenjin, Kamba, Gusii, Meru, Mijikenda, Somali, Turkana, Maasai, Embu, Taita, Pokot, Kuria, Borana, Rendille, Samburu, etc.
+
+                Button constraints: MUST start with ONE emoji, MUST be under 20 chars total.
+                Summary constraints: Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and strictly the *Header*: description format for every bullet). MUST maintain the warm, first-person voice of President William Ruto.
+
+                Input JSON:
+                #{Jason.encode!(fallback_json)}
+
+                Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary".
+                """
+
+                case PresidentialBridge.AIProxy.call_gemini_round_robin(gemini_prompt) do
+                  {:ok, trans_reply} ->
+                    cleaned_trans = trans_reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+                    case Jason.decode(cleaned_trans) do
+                      {:ok, trans_json} ->
+                        final_map = Map.put(trans_json, "english", %{
+                          "button" => fallback_json["en_button"] || "",
+                          "summary" => fallback_json["summary_en"] || ""
+                        })
+                        Redix.command(:redix, ["SET", "dynamic_news_translations", Jason.encode!(final_map)])
+                        sw_data = Map.get(trans_json, "kiswahili", %{})
+                        sh_data = Map.get(trans_json, "sheng", %{})
+                        Redix.command(:redix, ["SET", "dynamic_btn_en", fallback_json["en_button"] || ""])
+                        Redix.command(:redix, ["SET", "dynamic_btn_sw", Map.get(sw_data, "button", "Habari Mpya")])
+                        Redix.command(:redix, ["SET", "dynamic_btn_sh", Map.get(sh_data, "button", "Updates Zii")])
+                        Redix.command(:redix, ["SET", "dynamic_summary", fallback_json["summary_en"] || ""])
+                        Redix.command(:redix, ["SET", "dynamic_summary_sw", Map.get(sw_data, "summary", "")])
+                        Redix.command(:redix, ["SET", "dynamic_summary_sh", Map.get(sh_data, "summary", "")])
+                        Redix.command(:redix, ["SET", "dynamic_full_news_en", fallback_json["full_news_en"] || ""])
+                        Logger.info("[DataMiner] Gemini fallback: 48-lang translations saved successfully.")
+                      _ -> Logger.error("[DataMiner] Gemini fallback: Failed to decode translation JSON.")
+                    end
+                  _ -> Logger.error("[DataMiner] Gemini fallback: Translation step also failed.")
+                end
+              _ -> Logger.error("[DataMiner] Gemini fallback: Failed to decode fallback JSON: #{cleaned_fallback}")
+            end
+          {:error, fallback_reason} ->
+            Logger.error("[DataMiner] Gemini fallback also failed: #{inspect(fallback_reason)}. No news generated.")
+        end
+    end  # end outer case call_groq_json_round_robin
+  end  # end generate_dynamic_buttons
 
   # ─── Track 3: Media Sentiment via Serper + Gemini (PR Alerts) ─────────────
 
