@@ -495,7 +495,7 @@ defmodule PresidentialBridge.Router do
     query_params = conn.query_params
 
     phone = Map.get(query_params, "phone") || Map.get(params, "phone") || Map.get(params, "phone_number")
-    index_str = Map.get(params, "index") || "0"
+    index_str = Map.get(params, "news_index") || Map.get(params, "index") || "0"
     index = if is_binary(index_str) and index_str != "", do: elem(Integer.parse(index_str), 0), else: 0
 
     raw_queue = Redix.command!(:redix, ["GET", "news_queue:#{phone}"])
@@ -508,9 +508,8 @@ defmodule PresidentialBridge.Router do
     response = if item do
       # Generate overlay URL on demand
       overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["headline"], item["subtitle"])
-      next_display = display_index + 1
-      # Format: "2/10 Next 🔥" — max 14 chars even at 10/10, well within WhatsApp 20-char limit
-      button_label = "#{next_display}/#{total_count} Next 🔥"
+      is_last = display_index >= total_count
+      button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
       today = Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")
       %{
         headline: item["headline"],
@@ -549,6 +548,83 @@ defmodule PresidentialBridge.Router do
         data: %{
           headline: "All Caught Up!",
           subtitle: "There are no new updates to show right now. Check back later!",
+          detail: "",
+          date: today,
+          overlay_url: "https://lipagas.com/static/presidential_fallback.png",
+          next_index: 9999,
+          current_index: display_index,
+          total_count: total_count,
+          button_label: "Next 🔥"
+        }
+      }
+    end
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(response))
+  end
+
+  post "/api/paginate_projects" do
+    params = conn.body_params
+    IO.inspect(params, label: "[paginate_projects] received params")
+    conn = Plug.Conn.fetch_query_params(conn)
+    query_params = conn.query_params
+
+    phone = Map.get(query_params, "phone") || Map.get(params, "phone") || Map.get(params, "phone_number")
+    index_str = Map.get(params, "project_index") || Map.get(params, "index") || "0"
+    index = if is_binary(index_str) and index_str != "", do: elem(Integer.parse(index_str), 0), else: 0
+
+    raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+    queue_data = if raw_queue, do: Jason.decode!(raw_queue), else: %{"intro" => "", "projects" => []}
+    queue = queue_data["projects"] || []
+
+    total_count = length(queue)
+    item = Enum.at(queue, index)
+    display_index = index + 1  # 1-based for display
+
+    response = if item do
+      # Generate overlay URL on demand
+      overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["headline"], item["subtitle"])
+      is_last = display_index >= total_count
+      button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
+      
+      %{
+        headline: item["headline"],
+        subtitle: item["subtitle"],
+        detail: item["detail"] || "",
+        date: item["date"],
+        overlay_url: overlay_url,
+        next_index: index + 1,
+        current_index: display_index,
+        total_count: total_count,
+        button_label: button_label,
+        data: %{
+          headline: item["headline"],
+          subtitle: item["subtitle"],
+          detail: item["detail"] || "",
+          date: item["date"],
+          overlay_url: overlay_url,
+          next_index: index + 1,
+          current_index: display_index,
+          total_count: total_count,
+          button_label: button_label
+        }
+      }
+    else
+      today = Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")
+      %{
+        headline: "All Caught Up!",
+        subtitle: "There are no new projects to show right now. Check back later!",
+        detail: "",
+        date: today,
+        overlay_url: "https://lipagas.com/static/presidential_fallback.png",
+        next_index: 9999,
+        current_index: display_index,
+        total_count: total_count,
+        button_label: "Next 🔥",
+        data: %{
+          headline: "All Caught Up!",
+          subtitle: "There are no new projects to show right now. Check back later!",
           detail: "",
           date: today,
           overlay_url: "https://lipagas.com/static/presidential_fallback.png",

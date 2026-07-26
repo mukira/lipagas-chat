@@ -11,3 +11,19 @@
 
 ## Flow Migration & Text Preservation
 - **No Hallucinated Text Migrations:** When migrating, expanding, or translating an existing Typebot flow, NEVER improvise generic text or rewrite the user's original greetings/descriptions unless explicitly told to rewrite them. You must meticulously extract the existing text blocks from the database dump and preserve their exact phrasing, tone, and emojis in the new architecture.
+
+## WhatsApp Interactive Message Safety (Silent Drops)
+When building WhatsApp interactive messages (especially those with image headers):
+- **Never pass unverified or potentially broken image URLs directly to WhatsApp.** WhatsApp's API will accept the request with a `200 OK` status, but Meta's background workers will silently drop the message if they fail to download the media. 
+- **Always provide a guaranteed-safe fallback.** If an image generation script or external API fails, fall back to a known-working default image (e.g., from a pre-warmed Redis pool) to ensure message delivery. Never fall back to a URL that might 404.
+
+## Decoupling Overlay Text vs. WhatsApp Body Text
+When generating image overlays that require strict character limits (to prevent text from overflowing the image bounds):
+- **Do not overwrite the original variables.** Store the strictly sliced text (e.g., `short_headline`, `short_subtitle`) separately from the original text in your state/queue.
+- Pass the `short_` variants to the image overlay generator.
+- Pass the full original variants to the WhatsApp rich text body, applying a more generous, clean slice (e.g., 100 or 600 characters + `...`) to prevent WhatsApp's native, messy truncation.
+
+## Dynamic Button Payload Matching
+When intercepting Typebot button clicks in Elixir, remember that pagination or dynamic buttons often include prefixes (e.g., `"2/9 Next 🔥"`).
+- **Never use strict equality (`==`)** for intercepting dynamic buttons unless you are certain the string is static.
+- **Always use Regex suffix matching** (e.g., `String.match?(msg_lower, ~r/next 🔥$/)`) to safely catch dynamically prefixed button payloads.

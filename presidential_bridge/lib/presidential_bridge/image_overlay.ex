@@ -33,8 +33,17 @@ defmodule PresidentialBridge.ImageOverlay do
             public_url
           {error_msg, code} ->
             Logger.error("[ImageOverlay] Python script failed with code #{code}: #{error_msg}")
-            # Fallback to the original image URL if compositing fails
-            image_url
+            # Safe fallback so WhatsApp never drops the message
+            x_pool = case Redix.command(:redix, ["GET", "presidential_images"]) do
+              {:ok, val} when is_binary(val) ->
+                case Jason.decode(val) do
+                  {:ok, [first | _]} -> first["url"]
+                  _ -> nil
+                end
+              _ -> nil
+            end
+            
+            x_pool || "https://lipagas-content.s3.eu-west-1.amazonaws.com/ruto.jpg"
         end
     end
   end

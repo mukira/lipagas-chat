@@ -249,8 +249,8 @@ defmodule PresidentialBridge.DataMiner do
     Based on the following news context, write:
     1. "en_button": A short punchy English label starting with ONE emoji (under 20 chars).
     2. "summary_en": A JSON array of news items. EACH item MUST have:
-       - "title": A bold WhatsApp-friendly header (no asterisks, just plain text, under 40 chars)
-       - "subtitle": A short one-liner subtitle (under 60 chars)  
+       - "title": A short WhatsApp-friendly header (under 40 chars). Plain text only, absolutely NO markdown, NO asterisks.
+       - "subtitle": A short one-liner subtitle (under 60 chars). Plain text only, NO markdown, NO asterisks.  
        - "detail": 2-3 sentences in first person expanding on this specific update. Warm, presidential tone. DO NOT repeat the title or subtitle verbatim.
     3. "full_news_en": A detailed, well-formatted PR update written as if I am addressing the nation personally. First-person throughout. Bold headers. Clear separators. Do NOT mention any source names.
 

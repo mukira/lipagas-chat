@@ -54,11 +54,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
     user_name = get_in(payload, ["sender", "name"]) || 
                 get_in(payload, ["conversation", "meta", "sender", "name"]) || "Citizen"
 
-    # --- GLOBAL LANGUAGE INTERCEPTOR ---
-    if msg_lower in @kenyan_languages do
-      Session.set_language(phone, content)
-      IO.puts("[TypebotBotHandler] Global intercept: Saved persistent language for #{phone}: #{content}")
-    end
+
 
     meta = Map.get(@inbox_meta, inbox_id)
     if is_nil(meta) or is_nil(phone) or phone == "" do
@@ -66,6 +62,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
     else
       # --- INTERCEPTOR: Projects Near Me Location Input ---
       awaiting = Redix.command!(:redix, ["GET", "awaiting_location:#{phone}"]) == "true"
+      
+      # --- GLOBAL LANGUAGE INTERCEPTOR ---
+      if msg_lower in @kenyan_languages and not awaiting do
+        Session.set_language(phone, content)
+        IO.puts("[TypebotBotHandler] Global intercept: Saved persistent language for #{phone}: #{content}")
+      end
       
       is_projects_btn = msg_lower in [
         "📍 projects near me", 
@@ -97,72 +99,121 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           Task.start(fn ->
             {intro_text, projects} = PresidentialBridge.ProjectSearch.search(content, lang, user_name)
-            
             # 1. Send the intro text first
             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: intro_text}}, meta)
             
-            # 2. Fetch images from Redis and shuffle them
-            images_pool = 
-              case Redix.command(:redix, ["GET", "presidential_images"]) do
-                {:ok, val} when is_binary(val) -> 
-                  case Jason.decode(val) do
-                    {:ok, list} when is_list(list) -> Enum.shuffle(list)
-                    _ -> []
-                  end
-                _ -> []
-              end
+            # 2. Cache projects and assign priority images
+            count = PresidentialBridge.ProjectPaginator.cache_projects(intro_text, projects, phone, content)
             
-            # 3. Send each project as a separate image
-            if is_list(projects) do
-              projects
-              |> Enum.with_index()
-              |> Enum.each(fn {project, index} ->
-                # Get a unique image by wrapping around the pool
-                img = 
-                  if length(images_pool) > 0 do
-                    Enum.at(images_pool, rem(index, length(images_pool)))
-                  else
-                    nil
-                  end
+            # 3. Build Card 0 inline
+            if count > 0 do
+              raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+              queue_data = Jason.decode!(raw_queue)
+              queue = queue_data["projects"] || []
+              total_count = length(queue)
+              item = Enum.at(queue, 0)
+              
+              if item do
+                overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
+                button_label = if total_count == 1, do: "Done ✅", else: "2/#{total_count} Next 🔥"
                 
-                if img do
-                  caption = "*#{project["name"]}*\n#{project["subtitle"]}"
-                  send_meta(%{
-                    messaging_product: "whatsapp",
-                    to: phone,
-                    type: "image",
-                    image: %{link: img["url"], caption: caption}
-                  }, meta)
-                end
-              end)
+                clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
+                clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
+
+                # Send rich text with button and image header
+                text_body = """
+                📅 #{item["date"]}
+
+                *#{item["headline"]}*
+                #{clean_subtitle}
+
+                #{clean_detail}
+                """
+                
+                btn_payload = %{
+                  messaging_product: "whatsapp",
+                  to: phone,
+                  type: "interactive",
+                  interactive: %{
+                    type: "button",
+                    header: %{
+                      type: "image",
+                      image: %{link: overlay_url}
+                    },
+                    body: %{text: text_body},
+                    action: %{
+                      buttons: [
+                        %{
+                          type: "reply",
+                          reply: %{id: button_label, title: button_label}
+                        }
+                      ]
+                    }
+                  }
+                }
+                send_meta(btn_payload, meta)
+              end
             end
+          end)
+
+        String.match?(msg_lower, ~r/next 🔥$/) and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
+          IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
+          current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
+          current_index = String.to_integer(current_index_str)
+          next_index = current_index + 1
+          Redix.command!(:redix, ["SET", "projects_index:#{phone}", to_string(next_index), "EX", "3600"])
+
+          raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+          queue_data = if raw_queue, do: Jason.decode!(raw_queue), else: %{"projects" => []}
+          queue = queue_data["projects"] || []
+          total_count = length(queue)
+          item = Enum.at(queue, next_index)
+
+          if item do
+            display_index = next_index + 1
+            overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
+            is_last = display_index >= total_count
+            button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
             
-            # 2. Send interactive buttons for next steps natively
-            buttons_payload = %{
+            clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
+            clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
+
+            text_body = """
+            📅 #{item["date"]}
+
+            *#{item["headline"]}*
+            #{clean_subtitle}
+
+            #{clean_detail}
+            """
+            
+            btn_payload = %{
               messaging_product: "whatsapp",
               to: phone,
               type: "interactive",
               interactive: %{
                 type: "button",
-                body: %{text: "What would you like to do next?"},
+                header: %{
+                  type: "image",
+                  image: %{link: overlay_url}
+                },
+                body: %{text: text_body},
                 action: %{
                   buttons: [
                     %{
                       type: "reply",
-                      reply: %{id: "btn_search_again", title: "Search Another"}
-                    },
-                    %{
-                      type: "reply",
-                      reply: %{id: "btn_main_menu", title: "Main Menu"}
+                      reply: %{id: button_label, title: button_label}
                     }
                   ]
                 }
               }
             }
-            send_meta(buttons_payload, meta)
-          end)
+            send_meta(btn_payload, meta)
+          else
+            IO.puts("[TypebotBotHandler] Failed to find project for Next at index #{next_index}")
+          end
 
-        msg_lower == "search another" ->
+        msg_lower in ["search another", "yes, search again"] ->
           IO.puts("[TypebotBotHandler] Intercepting Search Another button click")
           Redix.command!(:redix, ["SET", "awaiting_location:#{phone}", "true", "EX", "300"])
           
@@ -184,6 +235,27 @@ defmodule PresidentialBridge.TypebotBotHandler do
             true -> "English"
           end
           # Trigger the deep switch logic natively to jump straight to the Main Menu
+          do_handle(Map.put(payload, "content", lang_str), slug)
+
+        msg_lower == "done ✅" ->
+          IO.puts("[TypebotBotHandler] Intercepting Done ✅ — sending closing message for #{phone}")
+          persistent_lang = Session.get_language(phone) || "english"
+          closing_msg = cond do
+            persistent_lang =~ "Kiswahili" -> "✅ Umesoma habari zote za leo! Nasikuishukuru kwa ushirikiano wako. Ikiwa una swali lolote, mimi niko hapa."
+            persistent_lang =~ "Sheng" -> "✅ Umalize ma-updates zote za leo fam! Ukihitaji kitu, nipigie tena. Tutaonana! 🇰🇪"
+            true -> "✅ You've read all of today's updates! Thank you for staying engaged. If you have any questions or want to explore more, I'm always here for you. 🇰🇪"
+          end
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: closing_msg}}, meta)
+          # Delete the stale news-pagination session BEFORE deep-switching.
+          # Without this, the old Typebot session is still parked at the choice input,
+          # so continue_chat("English") returns "Invalid message" and loops.
+          Session.delete_session(conv_id)
+          # Deep-switch back to the main menu using the user's persistent language
+          lang_str = cond do
+            persistent_lang =~ "Kiswahili" -> "Kiswahili"
+            persistent_lang =~ "Sheng" -> "Sheng"
+            true -> "English"
+          end
           do_handle(Map.put(payload, "content", lang_str), slug)
 
         is_projects_btn ->
@@ -316,9 +388,16 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
     channel_link = "\n\n📢 *Want to get these updates directly?* Join the President's official WhatsApp Channel here: https://whatsapp.com/channel/0029VbCLeJXJpe8ZJPvxlY05"
 
-    dynamic_summary_en = Map.get(en_data, "summary", "") <> channel_link
-    dynamic_summary_sw = Map.get(sw_data, "summary", "") <> channel_link
-    dynamic_summary_sh = Map.get(sh_data, "summary", "") <> channel_link
+    encode_summary = fn data ->
+      case Map.get(data, "summary", "") do
+        val when is_binary(val) -> val
+        val -> Jason.encode!(val)
+      end
+    end
+
+    dynamic_summary_en = encode_summary.(en_data) <> channel_link
+    dynamic_summary_sw = encode_summary.(sw_data) <> channel_link
+    dynamic_summary_sh = encode_summary.(sh_data) <> channel_link
 
     prefilled_vars = %{
       "user_name" => user_name,
