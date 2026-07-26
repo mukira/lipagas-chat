@@ -15,10 +15,7 @@ defmodule PresidentialBridge.DataMiner do
   @serper_interval  120 * 60 * 1000
 
   # ─── RSS Sources ───────────────────────────────────────────────────────────
-  @rss_feeds [
-    {"Nation",  "https://nation.africa/kenya/rss.xml"},
-    {"KBC",     "https://www.kbc.co.ke/feed/"}
-  ]
+  @rss_feeds []
 
   # Only keep items whose title/description contains one of these (case-insensitive)
   @rss_keywords ["ruto", "president", "state house", "government", "kenya",
@@ -85,9 +82,54 @@ defmodule PresidentialBridge.DataMiner do
 
         Logger.info("[DataMiner] X context fetched (#{byte_size(x_section)} chars).")
         store_merged_context(:x, x_section)
+        
+        # Extract images from the items
+        extract_images_from_items(items)
 
       err ->
         Logger.error("[DataMiner] Apify X fetch failed: #{inspect(err)}")
+    end
+  end
+  
+  defp extract_images_from_items(items) do
+    counties = [
+      "mombasa", "kwale", "kilifi", "tana river", "lamu", "taita taveta", "garissa",
+      "wajir", "mandera", "marsabit", "isiolo", "meru", "tharaka nithi", "embu",
+      "kitui", "machakos", "makueni", "nyandarua", "nyeri", "kirinyaga", "murang'a",
+      "kiambu", "turkana", "west pokot", "samburu", "trans nzoia", "uasin gishu",
+      "elgeyo marakwet", "nandi", "baringo", "laikipia", "nakuru", "narok", "kajiado",
+      "kericho", "bomet", "kakamega", "vihiga", "bungoma", "busia", "siaya", "kisumu",
+      "homa bay", "migori", "kisii", "nyamira", "nairobi", "housing", "road", "water",
+      "agriculture", "education", "health"
+    ]
+
+    images =
+      items
+      |> Enum.flat_map(fn item ->
+        text = item["text"] || item["full_text"] || ""
+        # Apify Twitter actor returns `media` array or `extendedEntities.media`
+        media_list = item["media"] || get_in(item, ["extendedEntities", "media"]) || get_in(item, ["entities", "media"]) || []
+        
+        # Get first photo URL
+        photo = Enum.find(media_list, fn m -> m["type"] == "photo" end)
+        if photo do
+          url = photo["media_url_https"] || photo["url"] || photo["media_url"]
+          if url do
+            text_lower = String.downcase(text)
+            matched_keywords = Enum.filter(counties, fn c -> String.contains?(text_lower, c) end)
+            
+            [%{url: url, tweet_text: String.downcase(text), keywords: matched_keywords}]
+          else
+            []
+          end
+        else
+          []
+        end
+      end)
+      
+    if length(images) > 0 do
+      Logger.info("[DataMiner] Extracted #{length(images)} images from X.")
+      Redix.command(:redix, ["SET", "presidential_images", Jason.encode!(images)])
     end
   end
 
@@ -197,24 +239,29 @@ defmodule PresidentialBridge.DataMiner do
     Logger.info("[DataMiner] Step 1: Generating English summary using Groq...")
     
     groq_prompt = """
-    You are an expert PR copywriter for the President of Kenya. Based on the following news context, write:
+    You are President William Samoei Ruto of Kenya, speaking directly and personally to a Kenyan citizen via WhatsApp. You are warm, authoritative, and speak in first person at ALL times.
+
+    HARD RULES — NEVER BREAK THESE:
+    - NEVER use "Ruto", "The President", "He", "The government" as subjects. You ARE the speaker.
+    - NEVER reference source names like KBC, Nation, Twitter, X, or any media outlet.
+    - ALWAYS write in first person: "I", "We", "My government", "I am proud to announce", "Today, we delivered".
+    - NEVER write a bullet that is just a headline without a colon-separated subtitle.
+
+    Based on the following news context, write:
     1. "en_button": A short punchy English label starting with ONE emoji (under 20 chars).
-    2. "summary_en": High-level positive headlines about what the President has done, strictly formatted as follows:
-       - One main title at the very top (using WhatsApp-native bold formatting, e.g., *Main Title*).
-       - A list of bullet points, where each bullet point has its own bold title and a brief summary (maximum 1 short sentence per bullet point).
-       Do not include any other text.
-    3. "full_news_en": A detailed, well-formatted PR update about the President's actions.
-       - Use a main title at the top.
-       - Use bullet points with bold headers (e.g., *Header*: description).
-       - Use clear separators.
-       - Do NOT mention any source names (like Nation, KBC, X, Twitter).
-       - The language must sound like highly positive achievements (e.g., "The President has...").
-    
+    2. "summary_en": High-level positive headlines, strictly formatted as follows:
+       - One main title at the very top in first person (using WhatsApp bold *Title*).
+       - A list of bullet points where EVERY bullet MUST follow the format: *Bold Header*: Description sentence in first person.
+       - EXAMPLE GOOD bullet: *Affordable Housing*: I have signed the Housing Act into law, delivering 200,000 homes for Kenyans.
+       - EXAMPLE BAD bullet: Ruto signs Housing Act. (NO — third-person, no colon, no subtitle)
+    3. "full_news_en": A detailed, well-formatted PR update written as if I am addressing the nation personally. First-person throughout. Bold headers. Clear separators. Do NOT mention any source names.
+
     Respond ONLY with a valid JSON object matching the exact keys: "en_button", "summary_en", "full_news_en".
-    
+
     News Context:
     #{merged_context}
     """
+
 
     case PresidentialBridge.AIProxy.call_groq_json_round_robin(groq_prompt) do
       {:ok, groq_json_str} ->
@@ -230,7 +277,7 @@ defmodule PresidentialBridge.DataMiner do
             Kiswahili, Sheng, Kikuyu, Luo, Kalenjin, Kamba, Gusii, Meru, Mijikenda, Somali, Turkana, Maasai, Embu, Taita, Pokot, Kuria, Borana, Rendille, Samburu, etc.
             
             Button constraints: MUST start with ONE emoji, MUST be under 20 chars total.
-            Summary constraints: Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and strictly 1 short sentence per bullet point summary).
+            Summary constraints: Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and strictly the *Header*: description format for every bullet). You MUST maintain the warm, first-person voice of President William Ruto speaking directly to the citizen in all translations.
             
             Input JSON:
             #{Jason.encode!(groq_json)}

@@ -109,3 +109,7 @@ When handling dynamic text (e.g., from an LLM) destined for the WhatsApp Meta AP
 
 ## 24. Linter Validation & Strict Error Catching
 - Before deploying any Typebot flow injection or Elixir bridge update, you MUST execute the typebot_linter.py to verify 100% edge integrity. All code must have explicit error catching (e.g. Try/Catch or case/match statements) to avoid silent failures and trial-and-error debugging.
+
+## 25. Typebot V6.1 Webhook & SSRF Debugging
+- **SSRF Allowed Hosts**: If a Typebot Webhook block is skipping silently and failing to hit internal Docker bridge APIs, ALWAYS check the `typebot-viewer` `.env` file for `SSRF_ALLOWED_HOSTS`. Internal hostnames (e.g., `presidential-bridge`, `chatwoot`) MUST be explicitly comma-separated here, otherwise the viewer's `validateHttpReqUrl.ts` will silently block the request with a security validation error.
+- **Response Variable Mapping Prefix**: When programmatically injecting or auditing Webhook blocks that extract JSON data, the `bodyPath` inside `responseVariableMapping` MUST be prefixed with `data.` (e.g., use `data.reply` instead of `reply`). In V6, the sandbox evaluates paths against a `{ data, statusCode }` object. A missing `data.` prefix causes a silent `ReferenceError` and leaves the Typebot variable empty.

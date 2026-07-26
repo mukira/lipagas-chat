@@ -12,10 +12,11 @@ defmodule PresidentialBridge.Translation do
   @gemini_base "https://generativelanguage.googleapis.com/v1beta/models"
 
   @gemini_models [
-    "gemini-1.5-pro",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.0-pro"
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash"
   ]
 
   # ─── Public API ────────────────────────────────────────────────────────────
@@ -40,6 +41,23 @@ defmodule PresidentialBridge.Translation do
     end
   end
   def translate(text, _), do: text
+
+  def translate_button_labels(labels, target_lang, char_limit) when is_list(labels) and labels != [] do
+    hash = :crypto.hash(:sha256, Enum.join(labels, "|")) |> Base.encode16(case: :lower)
+    key  = "pres_btn_trans:#{String.downcase(target_lang)}:#{char_limit}:#{hash}"
+
+    case Redix.command(:redix, ["GET", key]) do
+      {:ok, val} when is_binary(val) and val != "" ->
+        IO.puts("[Translation] Button Cache HIT for #{target_lang}")
+        Jason.decode!(val)
+      _ ->
+        IO.puts("[Translation] Button Cache MISS for #{target_lang}. Starting waterfall...")
+        translated = run_button_waterfall(labels, target_lang, char_limit)
+        Redix.command(:redix, ["SET", key, Jason.encode!(translated)])
+        translated
+    end
+  end
+  def translate_button_labels(labels, _, _), do: labels
 
   # ─── Model Waterfall ───────────────────────────────────────────────────────
 
@@ -153,6 +171,86 @@ defmodule PresidentialBridge.Translation do
     end
   end
 
+  defp run_button_waterfall(labels, target_lang, char_limit) do
+    gemini_keys = [
+      System.get_env("GEMINI_KEY_1") || "",
+      System.get_env("GEMINI_API_KEY") || "",
+      System.get_env("GEMINI_KEY_2") || ""
+    ] |> Enum.uniq() |> Enum.reject(&(&1 == ""))
+
+    case try_gemini_button_waterfall(labels, target_lang, char_limit, gemini_keys) do
+      {:ok, translations} -> translations
+      :exhausted ->
+        IO.puts("[Translation] All models exhausted for buttons #{target_lang}. Returning original labels.")
+        labels
+    end
+  end
+
+  defp try_gemini_button_waterfall(labels, target_lang, char_limit, keys) do
+    prompt = build_button_prompt(labels, target_lang, char_limit)
+    Enum.reduce_while(@gemini_models, :exhausted, fn model, _acc ->
+      IO.puts("[Translation] Trying Gemini model for buttons: #{model}...")
+      case try_gemini_model_for_buttons(model, prompt, keys, length(labels)) do
+        {:ok, result} -> {:halt, {:ok, result}}
+        :failed       -> {:cont, :exhausted}
+      end
+    end)
+  end
+
+  defp try_gemini_model_for_buttons(model, prompt, keys, expected_length) do
+    Enum.reduce_while(keys, :failed, fn key, _acc ->
+      url = "#{@gemini_base}/#{model}:generateContent?key=#{key}"
+      payload = %{
+        "contents"        => [%{"parts" => [%{"text" => prompt}]}],
+        "generationConfig" => %{"temperature" => 0.0}
+      }
+
+      timeout_ms = 45000
+
+      case PresidentialBridge.HTTP.post_json(url, payload, [], timeout_ms) do
+        {:ok, %{status: 200, body: body}} ->
+          case parse_gemini_button_response(body, expected_length) do
+            {:ok, list} ->
+              IO.puts("[Translation] ✅ Gemini #{model} buttons succeeded.")
+              {:halt, {:ok, list}}
+            :parse_error ->
+              IO.puts("[Translation] ⚠️  Gemini #{model} buttons returned unparseable response.")
+              {:cont, :failed}
+          end
+        _ ->
+          {:cont, :failed}
+      end
+    end)
+  end
+
+  defp parse_gemini_button_response(body, expected_length) do
+    try do
+      json = if is_binary(body), do: Jason.decode!(body), else: body
+      candidate = List.first(json["candidates"] || [])
+      part = List.first(get_in(candidate || %{}, ["content", "parts"]) || [])
+      raw_text = String.trim(part["text"] || "")
+
+      clean_text = raw_text
+                   |> String.replace(~r/^```(?:json)?\n?/i, "")
+                   |> String.replace(~r/\n?```$/i, "")
+                   |> String.trim()
+      
+      parsed_json = Jason.decode!(clean_text)
+      
+      if is_list(parsed_json) and length(parsed_json) == expected_length do
+        # Convert all elements to strings just in case
+        str_list = Enum.map(parsed_json, &to_string/1)
+        {:ok, str_list}
+      else
+        :parse_error
+      end
+    rescue
+      e -> 
+        IO.puts("[Translation] Button Parse error: #{inspect(e)}")
+        :parse_error
+    end
+  end
+
   # ─── Prompt Builder ────────────────────────────────────────────────────────
 
   defp build_prompt(text, target_lang) do
@@ -168,6 +266,29 @@ defmodule PresidentialBridge.Translation do
     5. EXACTLY PRESERVE all original formatting, including paragraphs, newlines (\n), and spacing. Do NOT collapse paragraphs into a single block. Your translated text must have the exact same number of paragraphs as the original text.
     
     Text: #{text}
+    """
+  end
+
+  defp build_button_prompt(labels, target_lang, char_limit) do
+    labels_json = Jason.encode!(labels)
+    """
+    You are an expert, native-speaking Kenyan linguist.
+    Translate the following list of button labels into #{target_lang}.
+
+    CRITICAL INSTRUCTIONS:
+    1. Return ONLY a raw JSON array of strings with EXACTLY #{length(labels)} elements matching the order of the input. Do NOT wrap it in a JSON object.
+    2. Each translated string MUST be #{char_limit} characters or fewer (including spaces and emojis). If you must shorten a word to fit, do so intelligently.
+    3. If you cannot translate a label authentically, keep the original English label exactly.
+    4. Do NOT pad short translations — keep them as concise as possible.
+    5. For Sheng specifically:
+       - Use real Nairobi street Sheng that young Kenyans (18-30) actually speak.
+       - Examples of real Sheng: "Pesa" (money), "Niaje" (what's up), "Sawa" (OK), "Kucheki" (to check).
+       - Do NOT mix in Kikuyu, Dholuo, or Kamba words and call it Sheng.
+       - If a concept has no natural Sheng equivalent, keep it in English — code-switching is authentic Sheng.
+       - NEVER invent words.
+
+    Input Labels:
+    #{labels_json}
     """
   end
 end

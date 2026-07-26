@@ -96,12 +96,95 @@ defmodule PresidentialBridge.TypebotBotHandler do
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: wait_msg}}, meta)
           
           Task.start(fn ->
-            result_text = PresidentialBridge.ProjectSearch.search(content, lang, user_name)
-            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: result_text}}, meta)
+            {intro_text, projects} = PresidentialBridge.ProjectSearch.search(content, lang, user_name)
             
-            # Reset Typebot back to Main Menu silently
-            do_handle(Map.put(payload, "content", "Ruto"), slug)
+            # 1. Send the intro text first
+            send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: intro_text}}, meta)
+            
+            # 2. Fetch images from Redis and shuffle them
+            images_pool = 
+              case Redix.command(:redix, ["GET", "presidential_images"]) do
+                {:ok, val} when is_binary(val) -> 
+                  case Jason.decode(val) do
+                    {:ok, list} when is_list(list) -> Enum.shuffle(list)
+                    _ -> []
+                  end
+                _ -> []
+              end
+            
+            # 3. Send each project as a separate image
+            if is_list(projects) do
+              projects
+              |> Enum.with_index()
+              |> Enum.each(fn {project, index} ->
+                # Get a unique image by wrapping around the pool
+                img = 
+                  if length(images_pool) > 0 do
+                    Enum.at(images_pool, rem(index, length(images_pool)))
+                  else
+                    nil
+                  end
+                
+                if img do
+                  caption = "*#{project["name"]}*\n#{project["subtitle"]}"
+                  send_meta(%{
+                    messaging_product: "whatsapp",
+                    to: phone,
+                    type: "image",
+                    image: %{link: img["url"], caption: caption}
+                  }, meta)
+                end
+              end)
+            end
+            
+            # 2. Send interactive buttons for next steps natively
+            buttons_payload = %{
+              messaging_product: "whatsapp",
+              to: phone,
+              type: "interactive",
+              interactive: %{
+                type: "button",
+                body: %{text: "What would you like to do next?"},
+                action: %{
+                  buttons: [
+                    %{
+                      type: "reply",
+                      reply: %{id: "btn_search_again", title: "Search Another"}
+                    },
+                    %{
+                      type: "reply",
+                      reply: %{id: "btn_main_menu", title: "Main Menu"}
+                    }
+                  ]
+                }
+              }
+            }
+            send_meta(buttons_payload, meta)
           end)
+
+        msg_lower == "search another" ->
+          IO.puts("[TypebotBotHandler] Intercepting Search Another button click")
+          Redix.command!(:redix, ["SET", "awaiting_location:#{phone}", "true", "EX", "300"])
+          
+          persistent_lang = Session.get_language(phone) || "english"
+          prompt_text = cond do
+            persistent_lang =~ "Kiswahili" -> "🌍 Uko wapi? Tafadhali andika jina la mji, wilaya, au kaunti yako:"
+            persistent_lang =~ "Sheng" -> "🌍 Uko area gani? Type jina ya tao, mtaa, ama county yako:"
+            true -> "🌍 Where are you located? Please type your town, district, or county:"
+          end
+          
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
+
+        msg_lower == "main menu" ->
+          IO.puts("[TypebotBotHandler] Intercepting Main Menu button click")
+          persistent_lang = Session.get_language(phone) || "english"
+          lang_str = cond do
+            persistent_lang =~ "Kiswahili" -> "Kiswahili"
+            persistent_lang =~ "Sheng" -> "Sheng"
+            true -> "English"
+          end
+          # Trigger the deep switch logic natively to jump straight to the Main Menu
+          do_handle(Map.put(payload, "content", lang_str), slug)
 
         is_projects_btn ->
           IO.puts("[TypebotBotHandler] Intercepting Projects button click")
@@ -173,7 +256,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
       IO.puts("[TypebotBotHandler] Error: #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
   end
 
-  defp return(), do: :ok
+
 
   # ─── Phone Extraction ─────────────────────────────────────────────────
 
@@ -248,7 +331,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
       "dynamic_btn_sh" => dynamic_btn_sh,
       "dynamic_summary" => dynamic_summary_en,
       "dynamic_summary_sw" => dynamic_summary_sw,
-      "dynamic_summary_sh" => dynamic_summary_sh
+      "dynamic_summary_sh" => dynamic_summary_sh,
+      "news_count" => "0"
     }
     IO.puts("[TypebotBotHandler] prefilled_vars: #{inspect(prefilled_vars)}")
 
@@ -263,8 +347,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
   end
 
   defp continue_session(conv_id, session_id, slug, content, payload) do
-    phone = extract_phone(payload)
-    content_lower = String.downcase(String.trim(content))
+    _phone = extract_phone(payload)
+    _content_lower = String.downcase(String.trim(content))
 
     IO.puts("[TypebotBotHandler] Calling Typebot.continue_chat for session: #{session_id}")
     case Typebot.continue_chat(session_id, content) do
@@ -290,6 +374,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
     is_bypass_var_set = String.contains?(raw_text, "{{NO_TRANSLATE}}")
     text = String.replace(raw_text, "{{NO_TRANSLATE}}", "") |> String.trim()
+
 
     is_lang_screen = is_bypass_var_set or (is_map(input) and input["type"] == "choice input" and
       Enum.any?(input["items"] || [], fn i -> 
@@ -348,9 +433,20 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_map(input) and input["type"] == "choice input" and
         length(input["items"] || []) in 1..3 ->
           items = input["items"] || []
-          buttons = items |> Enum.with_index() |> Enum.map(fn {item, i} ->
-            original = String.trim(item["content"] || item["label"] || "Option #{i+1}")
-            title = String.slice(original, 0, 20)
+          originals = items |> Enum.with_index() |> Enum.map(fn {item, i} ->
+            String.trim(item["content"] || item["label"] || "Option #{i+1}")
+          end)
+
+          lang = PresidentialBridge.Session.get_language(phone)
+          translated_titles =
+            if lang && lang not in ["English", "🇬🇧 English"] && not is_lang_screen do
+              PresidentialBridge.Translation.translate_button_labels(originals, lang, 20)
+            else
+              originals
+            end
+
+          buttons = Enum.zip(originals, translated_titles) |> Enum.map(fn {original, translated} ->
+            title = String.slice(translated || original, 0, 20)
             # Use original as ID so the exact string goes back to Typebot
             %{type: "reply", reply: %{id: String.slice(original, 0, 256), title: title}}
           end)
@@ -412,12 +508,32 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_map(input) and input["type"] == "choice input" and
         length(input["items"] || []) > 3 ->
           items = input["items"] || []
+          capped_items = Enum.take(items, 10)
           
-          rows = items |> Enum.take(10) |> Enum.with_index() |> Enum.map(fn {item, i} ->
-            original = String.trim(item["content"] || item["label"] || "Option #{i+1}")
-            title = String.slice(original, 0, 24)
+          originals = capped_items |> Enum.with_index() |> Enum.map(fn {item, i} ->
+            String.trim(item["content"] || item["label"] || "Option #{i+1}")
+          end)
+
+          lang = PresidentialBridge.Session.get_language(phone)
+          translated_titles =
+            if lang && lang not in ["English", "🇬🇧 English"] && not is_lang_screen do
+              PresidentialBridge.Translation.translate_button_labels(originals, lang, 24)
+            else
+              originals
+            end
+
+          rows = Enum.zip(originals, translated_titles) |> Enum.map(fn {original, translated} ->
+            title = String.slice(translated || original, 0, 24)
             %{id: String.slice(original, 0, 200), title: title}
           end)
+
+          view_options_label =
+            if lang && lang not in ["English", "🇬🇧 English"] do
+              PresidentialBridge.Translation.translate_button_labels(["View Options"], lang, 20)
+              |> List.first() || "View Options"
+            else
+              "View Options"
+            end
           
           body_text = if String.length(text) > 1000 do
             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
@@ -431,7 +547,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
             interactive: %{
               type: "list",
               body: %{text: body_text},
-              action: %{button: "View Options", sections: [%{title: "Options", rows: rows}]}
+              action: %{button: String.slice(view_options_label, 0, 20), sections: [%{title: "Options", rows: rows}]}
             }
           }, meta, is_lang_screen)
 
@@ -555,4 +671,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
       end
     end
   end
+
+  # ─── News Image Cards: parse bullets and send one image per point ─────────
+
+
 end

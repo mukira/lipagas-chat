@@ -461,7 +461,101 @@ defmodule PresidentialBridge.Router do
 
   # ─── 404 catch-all ────────────────────────────────────────────────────
 
+  # ─── Paginated News Webhook ──────────────────────────────────────────
+
+  post "/api/cache_news" do
+    params = conn.body_params
+    IO.inspect(params, label: "[cache_news] received params")
+
+    conn = Plug.Conn.fetch_query_params(conn)
+    query_params = conn.query_params
+    phone = Map.get(query_params, "phone") || Map.get(params, "phone") || Map.get(params, "phone_number")
+    
+    IO.inspect(query_params, label: "[cache_news] query_params")
+    IO.inspect(phone, label: "[cache_news] extracted phone")
+
+    # Bypass Typebot for the news string since large multi-line text breaks Typebot JSON body parsing
+    summary = case Redix.command(:redix, ["GET", "presidential_context"]) do
+      {:ok, val} when is_binary(val) -> val
+      _ -> "No latest news."
+    end
+
+    count = PresidentialBridge.NewsPaginator.cache_news(summary, phone)
+    IO.inspect(count, label: "[cache_news] count returned")
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(%{news_count: to_string(count), data: %{news_count: to_string(count)}}))
+  end
+
+  post "/api/paginate_news" do
+    params = conn.body_params
+    IO.inspect(params, label: "[paginate_news] received params")
+    conn = Plug.Conn.fetch_query_params(conn)
+    query_params = conn.query_params
+
+    phone = Map.get(query_params, "phone") || Map.get(params, "phone") || Map.get(params, "phone_number")
+    index_str = Map.get(params, "index") || "0"
+    index = if is_binary(index_str) and index_str != "", do: elem(Integer.parse(index_str), 0), else: 0
+
+    raw_queue = Redix.command!(:redix, ["GET", "news_queue:#{phone}"])
+    queue = if raw_queue, do: Jason.decode!(raw_queue), else: []
+
+    total_count = length(queue)
+    item = Enum.at(queue, index)
+    display_index = index + 1  # 1-based for display
+
+    response = if item do
+      # Generate overlay URL on demand
+      overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["headline"], item["subtitle"])
+      next_display = display_index + 1
+      # Format: "2/10 Next 🔥" — max 14 chars even at 10/10, well within WhatsApp 20-char limit
+      button_label = "#{next_display}/#{total_count} Next 🔥"
+      %{
+        headline: item["headline"],
+        subtitle: item["subtitle"],
+        overlay_url: overlay_url,
+        next_index: index + 1,
+        current_index: display_index,
+        total_count: total_count,
+        button_label: button_label,
+        data: %{
+          headline: item["headline"],
+          subtitle: item["subtitle"],
+          overlay_url: overlay_url,
+          next_index: index + 1,
+          current_index: display_index,
+          total_count: total_count,
+          button_label: button_label
+        }
+      }
+    else
+      %{
+        headline: "All Caught Up!",
+        subtitle: "There are no new updates to show right now. Check back later!",
+        overlay_url: "https://lipagas.com/static/presidential_fallback.png",
+        next_index: 9999,
+        current_index: display_index,
+        total_count: total_count,
+        button_label: "Next 🔥",
+        data: %{
+          headline: "All Caught Up!",
+          subtitle: "There are no new updates to show right now. Check back later!",
+          overlay_url: "https://lipagas.com/static/presidential_fallback.png",
+          next_index: 9999,
+          current_index: display_index,
+          total_count: total_count,
+          button_label: "Next 🔥"
+        }
+      }
+    end
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(response))
+  end
+
   match _ do
-    send_resp(conn, 404, "Not Found")
+    send_resp(conn, 404, "Not found")
   end
 end

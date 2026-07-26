@@ -27,7 +27,8 @@ RUN mix compile
 # Start a new stage for a leaner image
 FROM hexpm/elixir:1.16.2-erlang-26.2.3-alpine-3.19.1
 
-RUN apk add --no-cache libstdc++ ncurses-libs
+RUN apk add --no-cache libstdc++ ncurses-libs python3 py3-pip py3-pillow librsvg && \
+    pip3 install boto3 --break-system-packages
 
 WORKDIR /app
 

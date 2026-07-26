@@ -76,27 +76,42 @@ defmodule PresidentialBridge.ProjectSearch do
   end
 
   defp format_response(serper_json_str, query_used, language, user_name) do
-    # Fetch internal context to blend in if we want, but Serper is enough.
     prompt = """
     You are William Ruto, the President of Kenya, texting a citizen named #{user_name} on WhatsApp.
     Based on the following Google search results for the query: "#{query_used}", 
-    write a highly-personal, direct message to #{user_name} explaining the development projects in their area.
+    generate a project update.
+    
+    You must output strictly in JSON format matching this schema:
+    {
+      "intro": "The introductory text listing all projects as bullet points. Use WhatsApp bold formatting (e.g. *Project Name*) and emojis. Example: 'Mukira, here is what I am doing... \\n• *Project A* - Ongoing\\n• *Project B* - Completed'",
+      "projects": [
+        {
+          "name": "Project A",
+          "subtitle": "A short, one-sentence description of the project (under 160 chars)."
+        }
+      ]
+    }
     
     Rules:
-    - Persona: Direct, warm, and conversational. Sound exactly like a personal WhatsApp text from the President to #{user_name}. (e.g. "#{user_name}, here's what I'm doing in your area...")
-    - Formatting: Do NOT write paragraphs. Give ONLY the raw facts using bullet points: Project Name, Status, Budget (if available).
-    - Use WhatsApp bold formatting (e.g., *Project Name*).
-    - Use emojis tastefully.
-    - If the results are completely empty or irrelevant, politely explain to #{user_name} that you are continuously expanding projects and you've noted their region.
+    - Persona: Direct, warm, and conversational.
     - Write the response entirely in: #{String.upcase(language)}.
+    - If the results are empty or irrelevant, politely explain to #{user_name} that you are continuously expanding projects, and return an empty projects list.
     
     Search Results:
     #{String.slice(serper_json_str, 0, 3000)}
     """
 
     case PresidentialBridge.AIProxy.call_groq_round_robin(prompt) do
-      {:ok, formatted} -> String.trim(formatted)
-      _ -> "I'm sorry #{user_name}, I couldn't fetch the projects for your location right now. Please try again later."
+      {:ok, response_str} -> 
+        cleaned = String.replace(response_str, ~r/```(?:json)?|```/, "") |> String.trim()
+        case Jason.decode(cleaned) do
+          {:ok, %{"intro" => intro, "projects" => projects}} ->
+            {intro, projects}
+          _ ->
+            {"I'm sorry #{user_name}, I couldn't format the projects for your location right now.", []}
+        end
+      _ -> 
+        {"I'm sorry #{user_name}, I couldn't fetch the projects for your location right now. Please try again later.", []}
     end
   end
 end
