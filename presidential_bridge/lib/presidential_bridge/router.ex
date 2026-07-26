@@ -475,9 +475,9 @@ defmodule PresidentialBridge.Router do
     IO.inspect(phone, label: "[cache_news] extracted phone")
 
     # Bypass Typebot for the news string since large multi-line text breaks Typebot JSON body parsing
-    summary = case Redix.command(:redix, ["GET", "presidential_context"]) do
+    summary = case Redix.command(:redix, ["GET", "dynamic_summary"]) do
       {:ok, val} when is_binary(val) -> val
-      _ -> "No latest news."
+      _ -> "[]"
     end
 
     count = PresidentialBridge.NewsPaginator.cache_news(summary, phone)
@@ -511,9 +511,12 @@ defmodule PresidentialBridge.Router do
       next_display = display_index + 1
       # Format: "2/10 Next 🔥" — max 14 chars even at 10/10, well within WhatsApp 20-char limit
       button_label = "#{next_display}/#{total_count} Next 🔥"
+      today = Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")
       %{
         headline: item["headline"],
         subtitle: item["subtitle"],
+        detail: item["detail"] || "",
+        date: today,
         overlay_url: overlay_url,
         next_index: index + 1,
         current_index: display_index,
@@ -522,6 +525,8 @@ defmodule PresidentialBridge.Router do
         data: %{
           headline: item["headline"],
           subtitle: item["subtitle"],
+          detail: item["detail"] || "",
+          date: today,
           overlay_url: overlay_url,
           next_index: index + 1,
           current_index: display_index,
@@ -530,9 +535,12 @@ defmodule PresidentialBridge.Router do
         }
       }
     else
+      today = Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")
       %{
         headline: "All Caught Up!",
         subtitle: "There are no new updates to show right now. Check back later!",
+        detail: "",
+        date: today,
         overlay_url: "https://lipagas.com/static/presidential_fallback.png",
         next_index: 9999,
         current_index: display_index,
@@ -541,6 +549,8 @@ defmodule PresidentialBridge.Router do
         data: %{
           headline: "All Caught Up!",
           subtitle: "There are no new updates to show right now. Check back later!",
+          detail: "",
+          date: today,
           overlay_url: "https://lipagas.com/static/presidential_fallback.png",
           next_index: 9999,
           current_index: display_index,

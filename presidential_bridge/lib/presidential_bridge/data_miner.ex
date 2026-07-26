@@ -245,15 +245,13 @@ defmodule PresidentialBridge.DataMiner do
     - NEVER use "Ruto", "The President", "He", "The government" as subjects. You ARE the speaker.
     - NEVER reference source names like KBC, Nation, Twitter, X, or any media outlet.
     - ALWAYS write in first person: "I", "We", "My government", "I am proud to announce", "Today, we delivered".
-    - NEVER write a bullet that is just a headline without a colon-separated subtitle.
 
     Based on the following news context, write:
     1. "en_button": A short punchy English label starting with ONE emoji (under 20 chars).
-    2. "summary_en": High-level positive headlines, strictly formatted as follows:
-       - One main title at the very top in first person (using WhatsApp bold *Title*).
-       - A list of bullet points where EVERY bullet MUST follow the format: *Bold Header*: Description sentence in first person.
-       - EXAMPLE GOOD bullet: *Affordable Housing*: I have signed the Housing Act into law, delivering 200,000 homes for Kenyans.
-       - EXAMPLE BAD bullet: Ruto signs Housing Act. (NO — third-person, no colon, no subtitle)
+    2. "summary_en": A JSON array of news items. EACH item MUST have:
+       - "title": A bold WhatsApp-friendly header (no asterisks, just plain text, under 40 chars)
+       - "subtitle": A short one-liner subtitle (under 60 chars)  
+       - "detail": 2-3 sentences in first person expanding on this specific update. Warm, presidential tone. DO NOT repeat the title or subtitle verbatim.
     3. "full_news_en": A detailed, well-formatted PR update written as if I am addressing the nation personally. First-person throughout. Bold headers. Clear separators. Do NOT mention any source names.
 
     Respond ONLY with a valid JSON object matching the exact keys: "en_button", "summary_en", "full_news_en".
@@ -261,7 +259,6 @@ defmodule PresidentialBridge.DataMiner do
     News Context:
     #{merged_context}
     """
-
 
     case PresidentialBridge.AIProxy.call_groq_json_round_robin(groq_prompt) do
       {:ok, groq_json_str} ->
@@ -273,23 +270,21 @@ defmodule PresidentialBridge.DataMiner do
             Logger.info("[DataMiner] Step 2: Translating summary into 48 languages using Gemini...")
             gemini_prompt = """
             You are an expert translator specializing in ALL Kenyan ethnic languages.
-            I have an English button and a summary composed of a main title and bullet points. I need you to translate them into 48 Kenyan languages, including but not limited to:
+            I have an English button and a summary array composed of titles, subtitles, and details. I need you to translate them into 48 Kenyan languages, including but not limited to:
             Kiswahili, Sheng, Kikuyu, Luo, Kalenjin, Kamba, Gusii, Meru, Mijikenda, Somali, Turkana, Maasai, Embu, Taita, Pokot, Kuria, Borana, Rendille, Samburu, etc.
             
             Button constraints: MUST start with ONE emoji, MUST be under 20 chars total.
-            Summary constraints: Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and strictly the *Header*: description format for every bullet). You MUST maintain the warm, first-person voice of President William Ruto speaking directly to the citizen in all translations.
+            Summary constraints: Translate the "title", "subtitle", and "detail" fields of each item in the array. You MUST maintain the warm, first-person voice of President William Ruto speaking directly to the citizen in all translations.
             
             Input JSON:
             #{Jason.encode!(groq_json)}
             
-            Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary".
+            Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary" (which should be an array of the translated items).
             Example:
             {
-              "english": {"button": "...", "summary": "..."},
-              "kiswahili": {"button": "...", "summary": "..."},
-              "sheng": {"button": "...", "summary": "..."},
-              "kikuyu": {"button": "...", "summary": "..."},
-              "luo": {"button": "...", "summary": "..."}
+              "english": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]},
+              "kiswahili": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]},
+              "sheng": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]}
             }
             Do this for as many Kenyan languages as possible (aim for 48).
             """
