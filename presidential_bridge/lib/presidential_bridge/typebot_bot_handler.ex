@@ -850,10 +850,13 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_last = display_index >= total_count
       button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
 
+      # Generate AI headline/subtitle lazily for the image overlay
+      {ai_headline, ai_subtitle} = PresidentialBridge.NewsPaginator.generate_headline_for_overlay(item["detail"] || "")
+
       # Generate overlay URLs in parallel
       overlay_urls = item["image_urls"]
         |> Task.async_stream(
-             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, item["headline"], item["subtitle"]) end,
+             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, ai_headline, ai_subtitle) end,
              timeout: 30_000,
              max_concurrency: 4
            )

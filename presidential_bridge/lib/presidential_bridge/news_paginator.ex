@@ -44,6 +44,47 @@ defmodule PresidentialBridge.NewsPaginator do
     length(parsed_news)
   end
 
+  def generate_headline_for_overlay(text) do
+    # Fallback default
+    clean_text = String.replace(text, ~r/\s+/, " ") |> String.trim()
+    fallback_headline = if String.length(clean_text) > 100, do: String.slice(clean_text, 0, 100), else: clean_text
+    
+    hash = :crypto.hash(:md5, clean_text) |> Base.encode16(case: :lower)
+    cache_key = "overlay_headline:#{hash}"
+
+    case Redix.command(:redix, ["GET", cache_key]) do
+      {:ok, val} when is_binary(val) ->
+        case Jason.decode(val) do
+          {:ok, %{"headline" => h, "subtitle" => s}} -> {h, s}
+          _ -> {fallback_headline, ""}
+        end
+      _ ->
+        prompt = """
+        You are a WhatsApp news card writer for Kenya's Presidential bot.
+        Given this tweet text, write:
+        1. A headline (max 10 words, punchy, no truncation)
+        2. A subtitle (max 6 words, the date/context if visible, e.g. "Wed Jul 22, State House")
+
+        Tweet: #{text}
+
+        Respond ONLY in valid JSON: {"headline": "...", "subtitle": "..."}
+        """
+        
+        case PresidentialBridge.AIProxy.call_groq_json_round_robin(prompt) do
+          {:ok, reply} ->
+            cleaned = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+            case Jason.decode(cleaned) do
+              {:ok, parsed = %{"headline" => h, "subtitle" => s}} ->
+                # Cache for 3 days
+                Redix.command(:redix, ["SET", cache_key, Jason.encode!(parsed), "EX", "259200"])
+                {h, s}
+              _ -> {fallback_headline, ""}
+            end
+          _ -> {fallback_headline, ""}
+        end
+    end
+  end
+
   defp pick_best_image(_text, []), do: nil
   defp pick_best_image(text, pool) do
     search_text = String.downcase(text)
