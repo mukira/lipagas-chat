@@ -8,7 +8,7 @@ defmodule PresidentialBridge.ImageOverlay do
   def generate(image_url, headline, subtitle \\ "") do
     # Generate a cache key
     hash = :crypto.hash(:md5, "#{image_url}_#{headline}") |> Base.encode16(case: :lower)
-    cache_key = "overlay_v11:#{hash}"
+    cache_key = "overlay_v12:#{hash}"
     
     # Check Redis Cache
     case Redix.command(:redix, ["GET", cache_key]) do
@@ -19,7 +19,7 @@ defmodule PresidentialBridge.ImageOverlay do
         Logger.info("[ImageOverlay] Generating new overlay for #{headline}")
         
         # Temp file for output
-        output_path = "/tmp/overlay_v11_#{hash}.jpg"
+        output_path = "/tmp/overlay_v12_#{hash}.jpg"
         logo_path = "/app/lib/presidential_bridge/influence_logo-white.png" # Using pre-converted PNG
         
         python_script = "/app/lib/presidential_bridge/image_overlay.py"
