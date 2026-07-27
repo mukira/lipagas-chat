@@ -115,7 +115,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
               
               if item do
                 overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
-                button_label = if total_count == 1, do: "Done ✅", else: "2/#{total_count} Next 🔥"
+                button_label = if total_count == 1, do: "Done ✅", else: "2/#{total_count} Next 🏗️"
                 
                 clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
                 clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
@@ -156,7 +156,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
             end
           end)
 
-        String.match?(msg_lower, ~r/next 🔥$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
+        String.match?(msg_lower, ~r/next 🏗️$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
           current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
           current_index = String.to_integer(current_index_str)
@@ -173,7 +173,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
             display_index = next_index + 1
             overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
             is_last = display_index >= total_count
-            button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
+            button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🏗️"
             
             clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
             clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
