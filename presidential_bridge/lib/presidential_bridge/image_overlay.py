@@ -18,16 +18,17 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
     req = urllib.request.Request(image_url, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     })
+    temp_input_path = output_path.replace("overlay_v11_", "temp_input_")
     try:
         with urllib.request.urlopen(req) as response:
-            with open("/tmp/temp_orig.jpg", "wb") as f:
+            with open(temp_input_path, "wb") as f:
                 f.write(response.read())
     except Exception as e:
         print(f"Failed to download image: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Open the image
-    img = Image.open("/tmp/temp_orig.jpg").convert("RGBA")
+    img = Image.open(temp_input_path).convert("RGBA")
     
     # 2. Force exactly 1080x1080 via center crop
     target_width = 1080
@@ -165,7 +166,7 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
     # Cleanup
     try:
         os.remove(output_path)
-        os.remove("/tmp/temp_orig.jpg")
+        os.remove(output_path.replace("overlay_v11_", "temp_input_"))
     except:
         pass
 
