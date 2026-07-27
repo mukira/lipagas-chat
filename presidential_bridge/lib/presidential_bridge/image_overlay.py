@@ -18,7 +18,7 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
     req = urllib.request.Request(image_url, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     })
-    temp_input_path = output_path.replace("overlay_v12_", "temp_input_")
+    temp_input_path = output_path.replace("overlay_v13_", "temp_input_")
     try:
         with urllib.request.urlopen(req) as response:
             with open(temp_input_path, "wb") as f:

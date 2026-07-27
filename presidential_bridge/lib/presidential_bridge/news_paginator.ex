@@ -36,6 +36,7 @@ defmodule PresidentialBridge.NewsPaginator do
           "subtitle"   => format_tweet_date(created_at),
           "detail"     => text,
           "image_urls" => image_urls,
+          "author_handle" => get_in(tweet, ["author", "userName"]) || get_in(tweet, ["user", "screen_name"]) || "",
           "button_payload" => "news_read_more_#{idx}"
         }
       end)
@@ -44,27 +45,33 @@ defmodule PresidentialBridge.NewsPaginator do
     length(parsed_news)
   end
 
-  def generate_headline_for_overlay(text) do
+  def generate_headline_for_overlay(text, author_handle) do
     # Fallback default
     clean_text = String.replace(text, ~r/\s+/, " ") |> String.trim()
     fallback_headline = if String.length(clean_text) > 100, do: String.slice(clean_text, 0, 100), else: clean_text
     
     hash = :crypto.hash(:md5, clean_text) |> Base.encode16(case: :lower)
-    cache_key = "overlay_headline_v2:#{hash}"
+    cache_key = "overlay_headline_v13:#{hash}"
 
     case Redix.command(:redix, ["GET", cache_key]) do
       {:ok, val} when is_binary(val) ->
         case Jason.decode(val) do
           {:ok, %{"headline" => h, "subtitle" => s, "body" => b}} -> {h, s, b}
-          _ -> {fallback_headline, "", fallback_headline}
+          _ -> {fallback_headline, "", ""}
         end
       _ ->
+        voice_instruction = if String.downcase(author_handle) == "williamsruto" do
+          "3. \"body\": Rewrite the tweet body in first-person as President Ruto speaking directly to a Kenyan citizen. Remove all @mentions, twitter handles, and t.co links. Max 3 sentences."
+        else
+          "3. \"body\": Summarize the tweet cleanly in third person. Remove all @mentions, twitter handles, and t.co links. Max 3 sentences."
+        end
+
         prompt = """
-        You are the ghostwriter for Kenya's Presidential WhatsApp bot. 
-        Given this raw tweet text, extract and rewrite the information into three parts:
-        1. "headline": A punchy headline (max 10 words, no truncation).
-        2. "subtitle": A short context tag (max 6 words, e.g. "Wed Jul 22, State House").
-        3. "body": A casual, conversational, and highly engaging rewrite of the news (up to 100 words). It must sound like the President of Kenya messaging a citizen directly as a friend on WhatsApp. Use first-person ("I", "we") and include a few tasteful, professional emojis to make it feel natural and engaging. Do NOT sound like a stiff press release.
+        You are a content writer for Kenya's Presidential WhatsApp bot.
+        Given this official tweet, write:
+        1. "headline": A punchy title (max 10 words, no truncation)
+        2. "subtitle": Date/location context (max 6 words, e.g. "Wed Jul 22, State House")
+        #{voice_instruction}
 
         Tweet: #{text}
 
@@ -79,9 +86,9 @@ defmodule PresidentialBridge.NewsPaginator do
                 # Cache for 3 days
                 Redix.command(:redix, ["SET", cache_key, Jason.encode!(parsed), "EX", "259200"])
                 {h, s, b}
-              _ -> {fallback_headline, "", fallback_headline}
+              _ -> {fallback_headline, "", ""}
             end
-          _ -> {fallback_headline, "", fallback_headline}
+          _ -> {fallback_headline, "", ""}
         end
     end
   end
