@@ -120,49 +120,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
               raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
               queue_data = Jason.decode!(raw_queue)
               queue = queue_data["projects"] || []
-              total_count = length(queue)
-              item = Enum.at(queue, 0)
-              
-              if item do
-                overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
-                button_label = if total_count == 1, do: "Done ✅", else: "2/#{total_count} Next 🏗️"
-                
-                clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
-                clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
-
-                # Send rich text with button and image header
-                text_body = """
-                📅 #{item["date"]}
-
-                *#{item["headline"]}*
-                #{clean_subtitle}
-
-                #{clean_detail}
-                """
-                
-                btn_payload = %{
-                  messaging_product: "whatsapp",
-                  to: phone,
-                  type: "interactive",
-                  interactive: %{
-                    type: "button",
-                    header: %{
-                      type: "image",
-                      image: %{link: overlay_url}
-                    },
-                    body: %{text: text_body},
-                    action: %{
-                      buttons: [
-                        %{
-                          type: "reply",
-                          reply: %{id: button_label, title: button_label}
-                        }
-                      ]
-                    }
-                  }
-                }
-                send_meta(btn_payload, meta)
-              end
+              Task.start(fn -> send_project_card(phone, meta, 0, queue) end)
             end
           end)
 
@@ -191,57 +149,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
           raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
           queue_data = if raw_queue, do: Jason.decode!(raw_queue), else: %{"projects" => []}
           queue = queue_data["projects"] || []
-          total_count = length(queue)
-          item = Enum.at(queue, next_index)
-
-          if item do
-            display_index = next_index + 1
-            overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["short_headline"], item["short_subtitle"])
-            is_last = display_index >= total_count
-            button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🏗️"
-            
-            clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
-            clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
-
-            text_body = """
-            📅 #{item["date"]}
-
-            *#{item["headline"]}*
-            #{clean_subtitle}
-
-            #{clean_detail}
-            """
-            
-            btn_payload = %{
-              messaging_product: "whatsapp",
-              to: phone,
-              type: "interactive",
-              interactive: %{
-                type: "button",
-                header: %{
-                  type: "image",
-                  image: %{link: overlay_url}
-                },
-                body: %{text: text_body},
-                action: %{
-                  buttons: 
-                    if display_index > 1 do
-                      [
-                        %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
-                        %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                      ]
-                    else
-                      [
-                        %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                      ]
-                    end
-                }
-              }
-            }
-            send_meta(btn_payload, meta)
-          else
-            IO.puts("[TypebotBotHandler] Failed to find project for Next at index #{next_index}")
-          end
+          
+          Task.start(fn -> send_project_card(phone, meta, next_index, queue) end)
 
         msg_lower in ["search another", "yes, search again"] ->
           IO.puts("[TypebotBotHandler] Intercepting Search Another button click")
@@ -926,6 +835,82 @@ defmodule PresidentialBridge.TypebotBotHandler do
       send_meta(btn_payload, meta, false)
     else
       IO.puts("[TypebotBotHandler] Failed to find news for Next at index #{next_index}")
+    end
+  end
+
+  defp send_project_card(phone, meta, next_index, queue) do
+    total_count = length(queue)
+    item = Enum.at(queue, next_index)
+
+    if item do
+      display_index = next_index + 1
+      is_last = display_index >= total_count
+      button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🏗️"
+      
+      clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
+      clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
+
+      text_body = """
+      📅 #{item["date"]}
+
+      *#{item["headline"]}*
+      #{clean_subtitle}
+
+      #{clean_detail}
+      """
+
+      # Generate overlay URLs in parallel for all images in the project
+      overlay_urls = (item["image_urls"] || [item["image_url"]])
+        |> Task.async_stream(
+             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, item["short_headline"], item["short_subtitle"]) end,
+             timeout: 30_000,
+             max_concurrency: 3
+           )
+        |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
+        |> Enum.reject(&is_nil/1)
+
+      fallback_url = "https://lipagas.com/static/presidential_fallback.png"
+      first_image_url = List.first(overlay_urls) || fallback_url
+      remaining_images = Enum.drop(overlay_urls, 1)
+
+      # 1. Send all extra images first (if any)
+      Enum.each(remaining_images, fn url ->
+        send_meta(%{
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "image",
+          image: %{link: url}
+        }, meta, false)
+        Process.sleep(200) # Tiny delay to help ordering
+      end)
+
+      # 2. Send the Main Card (Atomic Image + Text + Buttons)
+      btn_payload = %{
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "interactive",
+        interactive: %{
+          type: "button",
+          header: %{type: "image", image: %{link: first_image_url}},
+          body: %{text: text_body},
+          action: %{
+            buttons: 
+              if display_index > 1 do
+                [
+                  %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
+                  %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                ]
+              else
+                [
+                  %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                ]
+              end
+          }
+        }
+      }
+      send_meta(btn_payload, meta)
+    else
+      IO.puts("[TypebotBotHandler] Failed to find project at index #{next_index}")
     end
   end
 

@@ -15,31 +15,31 @@ defmodule PresidentialBridge.ProjectPaginator do
         _ -> []
       end
 
-    # Fetch Serper Images
-    serper_images = fetch_serper_images(location)
+    # Concurrently fetch serper & og images per project
+    projects_with_images = Task.async_stream(projects, fn item ->
+      headline = item["title"] || item["name"] || "Project"
+      clean_headline = String.slice(headline, 0, 40)
+      link = item["link"] || ""
+      serper = fetch_serper_images(clean_headline, location)
+      og = scrape_og_image(link)
+      {item, serper, og}
+    end, max_concurrency: 5, timeout: 15_000)
+    |> Enum.map(fn {:ok, res} -> res; _ -> nil end)
+    |> Enum.reject(&is_nil/1)
 
-    parsed_projects = Enum.reduce(projects, {[], images_pool}, fn item, {projects_acc, current_pool} ->
+    parsed_projects = Enum.reduce(projects_with_images, {[], images_pool}, fn {item, serper, og}, {projects_acc, current_pool} ->
       headline = item["title"] || item["name"] || "Project"
       subtitle = item["subtitle"] || ""
       detail = item["detail"] || ""
-      link = item["link"] || ""
 
       # Apply strict truncation to avoid overlay clipping
       clean_headline = String.slice(headline, 0, 40)
       clean_subtitle = String.slice(subtitle, 0, 60)
 
-      # Determine best image using Priority Waterfall
-      # Priority 1: Serper /images (if we can find a matching one)
-      # Priority 2: og:image scrape (if link is available)
-      # Priority 3: X Pool fallback
-      img_url = find_best_image(clean_headline, link, serper_images)
+      # Build image list up to 3
+      images = (serper ++ List.wrap(og)) |> Enum.uniq() |> Enum.reject(&is_nil/1) |> Enum.reject(&(&1 == ""))
       
-      {final_img_url, new_pool} = if is_nil(img_url) and length(current_pool) > 0 do
-        fallback_img = Enum.at(current_pool, 0)
-        {fallback_img["url"], List.delete_at(current_pool, 0)}
-      else
-        {img_url || "https://lipagas.com/static/presidential_fallback.png", current_pool}
-      end
+      {final_images, new_pool} = fill_images(images, 3, current_pool)
 
       queue_item = %{
         "headline" => headline,
@@ -47,7 +47,7 @@ defmodule PresidentialBridge.ProjectPaginator do
         "short_headline" => clean_headline,
         "short_subtitle" => clean_subtitle,
         "detail" => detail,
-        "image_url" => final_img_url,
+        "image_urls" => final_images,
         "date" => item["date"] || (Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")),
         "button_payload" => "project_read_more_#{length(projects_acc)}"
       }
@@ -68,18 +68,18 @@ defmodule PresidentialBridge.ProjectPaginator do
     length(parsed_projects)
   end
 
-  defp fetch_serper_images(location) do
+  defp fetch_serper_images(project_title, location) do
     url = "https://google.serper.dev/images"
     api_key = System.get_env("SERPER_API_KEY") || ""
     headers = [{"X-API-KEY", api_key}]
-    query = "President Ruto projects #{location} Kenya"
+    query = "President Ruto #{project_title} in #{location} Kenya"
     
     case PresidentialBridge.HTTP.post_json(url, %{q: query, gl: "ke"}, headers) do
       {:ok, %{status: 200, body: resp_body}} ->
         if is_map(resp_body) do
           images = resp_body["images"] || []
-          # Extract just the image URLs
-          Enum.map(images, fn img -> img["imageUrl"] end)
+          # Extract just the image URLs (take up to 3)
+          Enum.map(images, fn img -> img["imageUrl"] end) |> Enum.take(3)
         else
           []
         end
@@ -87,13 +87,25 @@ defmodule PresidentialBridge.ProjectPaginator do
     end
   end
 
-  defp find_best_image(_headline, link, serper_images) do
-    serper_img = if length(serper_images) > 0, do: Enum.random(serper_images), else: nil
-    
-    if serper_img do
-      serper_img
+  defp fill_images(images, max_count, pool) do
+    current_len = length(images)
+    if current_len >= max_count do
+      {Enum.take(images, max_count), pool}
     else
-      scrape_og_image(link)
+      needed = max_count - current_len
+      fallback_imgs = Enum.take(pool, needed) |> Enum.map(fn item ->
+        if is_map(item), do: item["url"], else: nil
+      end) |> Enum.reject(&is_nil/1)
+      
+      new_pool = Enum.drop(pool, needed)
+      
+      final_imgs = images ++ fallback_imgs
+      final_imgs = if length(final_imgs) == 0 do
+        ["https://lipagas.com/static/presidential_fallback.png"]
+      else
+        final_imgs
+      end
+      {final_imgs, new_pool}
     end
   end
 
