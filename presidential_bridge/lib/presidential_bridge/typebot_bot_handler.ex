@@ -78,6 +78,16 @@ defmodule PresidentialBridge.TypebotBotHandler do
         "projects area yangu"
       ]
 
+      is_news_btn = msg_lower in [
+        "📰 rais news",
+        "rais news",
+        "📰 president's updates",
+        "📰 taarifa za rais",
+        "📰 rada ya prezzo",
+        "📰 habari mpya",
+        "habari mpya"
+      ]
+
       cond do
         awaiting and msg_lower not in @reset_keywords ->
           IO.puts("[TypebotBotHandler] Intercepting location: #{content}")
@@ -285,6 +295,36 @@ defmodule PresidentialBridge.TypebotBotHandler do
           end
           
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
+
+        is_news_btn ->
+          IO.puts("[TypebotBotHandler] Intercepting News button click natively")
+          count = PresidentialBridge.NewsPaginator.cache_news_from_tweets(phone)
+          
+          persistent_lang = Session.get_language(phone) || "english"
+          count_msg = cond do
+            persistent_lang =~ "Kiswahili" -> "🔥 Una taarifa #{count} mpya leo! Uko tayari kuanza?"
+            persistent_lang =~ "Sheng" -> "🔥 Uko na ma-updates #{count} mpya leo! Tu-dive in?"
+            true -> "🔥 You have #{count} new updates today! Ready to dive in?"
+          end
+          
+          btn_payload = %{
+            messaging_product: "whatsapp",
+            to: phone,
+            type: "interactive",
+            interactive: %{
+              type: "button",
+              body: %{text: count_msg},
+              action: %{
+                buttons: [
+                  %{
+                    type: "reply",
+                    reply: %{id: "show first update 🚀", title: "Show first update 🚀"}
+                  }
+                ]
+              }
+            }
+          }
+          send_meta(btn_payload, meta)
 
         true ->
           IO.puts("[TypebotBotHandler] conv_id=#{conv_id} inbox=#{inbox_id} phone=#{phone} msg=#{inspect(content)}")
