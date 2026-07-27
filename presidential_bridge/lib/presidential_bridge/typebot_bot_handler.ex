@@ -873,68 +873,46 @@ defmodule PresidentialBridge.TypebotBotHandler do
       #{clean_detail}
       """
 
-      if length(overlay_urls) <= 1 do
-        # Single image -> Standard interactive card with image header
-        url = List.first(overlay_urls) || "https://res.cloudinary.com/dtg0cguld/image/upload/v1727787320/ruto-flag-square_n3p9hx.jpg"
-        btn_payload = %{
+      fallback_url = "https://res.cloudinary.com/dtg0cguld/image/upload/v1727787320/ruto-flag-square_n3p9hx.jpg"
+      first_image_url = List.first(overlay_urls) || fallback_url
+      remaining_images = Enum.drop(overlay_urls, 1)
+
+      # 1. Send all extra images first (if any)
+      Enum.each(remaining_images, fn url ->
+        send_meta(%{
           messaging_product: "whatsapp",
           to: phone,
-          type: "interactive",
-          interactive: %{
-            type: "button",
-            header: %{type: "image", image: %{link: url}},
-            body: %{text: text_body},
-            action: %{
-              buttons: 
-                if display_index > 1 do
-                  [
-                    %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
-                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                  ]
-                else
-                  [
-                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                  ]
-                end
-            }
+          type: "image",
+          image: %{link: url}
+        }, meta, false)
+        Process.sleep(200) # Tiny delay to help ordering for extra images
+      end)
+
+      # 2. Send the Main Card (Atomic Image + Text + Buttons)
+      btn_payload = %{
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "interactive",
+        interactive: %{
+          type: "button",
+          header: %{type: "image", image: %{link: first_image_url}},
+          body: %{text: text_body},
+          action: %{
+            buttons: 
+              if display_index > 1 do
+                [
+                  %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
+                  %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                ]
+              else
+                [
+                  %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                ]
+              end
           }
         }
-        send_meta(btn_payload, meta, false)
-      else
-        # Multi-image carousel -> sequential image messages, then text card without header
-        Enum.each(overlay_urls, fn url ->
-          send_meta(%{
-            messaging_product: "whatsapp",
-            to: phone,
-            type: "image",
-            image: %{link: url}
-          }, meta, false)
-        end)
-        
-        btn_payload = %{
-          messaging_product: "whatsapp",
-          to: phone,
-          type: "interactive",
-          interactive: %{
-            type: "button",
-            body: %{text: text_body},
-            action: %{
-              buttons: 
-                if display_index > 1 do
-                  [
-                    %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
-                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                  ]
-                else
-                  [
-                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
-                  ]
-                end
-            }
-          }
-        }
-        send_meta(btn_payload, meta, false)
-      end
+      }
+      send_meta(btn_payload, meta, false)
     else
       IO.puts("[TypebotBotHandler] Failed to find news for Next at index #{next_index}")
     end
