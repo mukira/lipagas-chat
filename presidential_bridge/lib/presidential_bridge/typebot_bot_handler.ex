@@ -156,6 +156,21 @@ defmodule PresidentialBridge.TypebotBotHandler do
             end
           end)
 
+        (msg_lower == "show first update 🚀" or String.match?(msg_lower, ~r/next 🔥$/)) and Redix.command!(:redix, ["GET", "news_queue:#{phone}"]) != nil ->
+          IO.puts("[TypebotBotHandler] Intercepting News Pagination")
+          is_start = msg_lower == "show first update 🚀"
+          
+          current_index_str = Redix.command!(:redix, ["GET", "news_index:#{phone}"]) || "-1"
+          current_index = String.to_integer(current_index_str)
+          
+          next_index = if is_start, do: 0, else: current_index + 1
+          Redix.command!(:redix, ["SET", "news_index:#{phone}", to_string(next_index), "EX", "86400"])
+
+          raw_queue = Redix.command!(:redix, ["GET", "news_queue:#{phone}"])
+          queue = if raw_queue, do: Jason.decode!(raw_queue), else: []
+          
+          Task.start(fn -> send_news_card(phone, meta, next_index, queue) end)
+
         String.match?(msg_lower, ~r/next 🏗️$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
           current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
@@ -775,5 +790,80 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
   # ─── News Image Cards: parse bullets and send one image per point ─────────
 
+  defp send_news_card(phone, meta, next_index, queue) do
+    total_count = length(queue)
+    item = Enum.at(queue, next_index)
+
+    if item do
+      display_index = next_index + 1
+      is_last = display_index >= total_count
+      button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
+
+      # Generate overlay URLs in parallel
+      overlay_urls = item["image_urls"]
+        |> Task.async_stream(
+             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, item["headline"], item["subtitle"]) end,
+             timeout: 30_000,
+             max_concurrency: 4
+           )
+        |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
+        |> Enum.reject(&is_nil/1)
+
+      clean_detail = if String.length(item["detail"] || "") > 900, do: String.slice(item["detail"], 0, 900) <> "...", else: item["detail"] || ""
+      
+      text_body = """
+      📅 #{item["subtitle"]}
+
+      *#{item["headline"]}*
+
+      #{clean_detail}
+      """
+
+      if length(overlay_urls) <= 1 do
+        # Single image -> Standard interactive card with image header
+        url = List.first(overlay_urls) || "https://res.cloudinary.com/dtg0cguld/image/upload/v1727787320/ruto-flag-square_n3p9hx.jpg"
+        btn_payload = %{
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "interactive",
+          interactive: %{
+            type: "button",
+            header: %{type: "image", image: %{link: url}},
+            body: %{text: text_body},
+            action: %{
+              buttons: [%{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}]
+            }
+          }
+        }
+        send_meta(btn_payload, meta, false)
+      else
+        # Multi-image carousel -> sequential image messages, then text card without header
+        Enum.each(overlay_urls, fn url ->
+          send_meta(%{
+            messaging_product: "whatsapp",
+            to: phone,
+            type: "image",
+            image: %{link: url}
+          }, meta, false)
+        end)
+        
+        btn_payload = %{
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "interactive",
+          interactive: %{
+            type: "button",
+            body: %{text: text_body},
+            action: %{
+              buttons: [%{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}]
+            }
+          }
+        }
+        send_meta(btn_payload, meta, false)
+      end
+    else
+      IO.puts("[TypebotBotHandler] Failed to find news for Next at index #{next_index}")
+    end
+  end
 
 end

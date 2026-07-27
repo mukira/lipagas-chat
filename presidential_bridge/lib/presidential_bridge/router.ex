@@ -479,13 +479,7 @@ defmodule PresidentialBridge.Router do
     IO.inspect(query_params, label: "[cache_news] query_params")
     IO.inspect(phone, label: "[cache_news] extracted phone")
 
-    # Bypass Typebot for the news string since large multi-line text breaks Typebot JSON body parsing
-    summary = case Redix.command(:redix, ["GET", "dynamic_summary"]) do
-      {:ok, val} when is_binary(val) -> val
-      _ -> "[]"
-    end
-
-    count = PresidentialBridge.NewsPaginator.cache_news(summary, phone)
+    count = PresidentialBridge.NewsPaginator.cache_news_from_tweets(phone)
     IO.inspect(count, label: "[cache_news] count returned")
 
     conn
@@ -511,8 +505,16 @@ defmodule PresidentialBridge.Router do
     display_index = index + 1  # 1-based for display
 
     response = if item do
-      # Generate overlay URL on demand
-      overlay_url = PresidentialBridge.ImageOverlay.generate(item["image_url"], item["headline"], item["subtitle"])
+      # Generate overlay URLs in parallel
+      overlay_urls = item["image_urls"]
+        |> Task.async_stream(
+             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, item["headline"], item["subtitle"]) end,
+             timeout: 30_000,
+             max_concurrency: 4
+           )
+        |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
+        |> Enum.reject(&is_nil/1)
+
       is_last = display_index >= total_count
       button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
       today = Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")
@@ -521,7 +523,7 @@ defmodule PresidentialBridge.Router do
         subtitle: item["subtitle"],
         detail: item["detail"] || "",
         date: today,
-        overlay_url: overlay_url,
+        overlay_urls: overlay_urls,
         next_index: index + 1,
         current_index: display_index,
         total_count: total_count,
@@ -531,7 +533,7 @@ defmodule PresidentialBridge.Router do
           subtitle: item["subtitle"],
           detail: item["detail"] || "",
           date: today,
-          overlay_url: overlay_url,
+          overlay_urls: overlay_urls,
           next_index: index + 1,
           current_index: display_index,
           total_count: total_count,

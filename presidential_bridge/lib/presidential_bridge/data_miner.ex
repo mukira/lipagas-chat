@@ -66,25 +66,63 @@ defmodule PresidentialBridge.DataMiner do
     
     # Tracking all official handles provided
     search_query = "from:WilliamsRuto OR from:StateHouseKenya OR from:SpokespersonGoK OR from:MwauraIsaac1"
-    payload = %{"searchTerms" => [search_query], "maxItems" => 5}
+    last_tweet_id = case Redix.command(:redix, ["GET", "last_seen_tweet_id"]) do
+      {:ok, val} when is_binary(val) -> val
+      _ -> nil
+    end
+    
+    payload = if last_tweet_id do
+      %{"searchTerms" => [search_query], "maxItems" => 72, "sinceId" => last_tweet_id}
+    else
+      %{"searchTerms" => [search_query], "maxItems" => 72}
+    end
 
     case PresidentialBridge.HTTP.post_json(url, payload, []) do
       {:ok, %{status: status, body: items}} when status in [200, 201] and is_list(items) ->
-        x_section =
-          items
-          |> Enum.map(fn item ->
-            date = item["createdAt"] || item["created_at"] || ""
-            text = item["text"] || item["full_text"] || ""
-            "Date: #{date}\nTweet: #{text}"
-          end)
-          |> Enum.join("\n\n")
-          |> String.slice(0, @max_section_chars)
+        new_tweet_count = length(items)
+        if new_tweet_count > 0 do
+          newest_id = items |> Enum.max_by(& &1["id"] || "0") |> Map.get("id")
+          if newest_id, do: Redix.command(:redix, ["SET", "last_seen_tweet_id", newest_id])
 
-        Logger.info("[DataMiner] X context fetched (#{byte_size(x_section)} chars).")
-        store_merged_context(:x, x_section)
-        
-        # Extract images from the items
-        extract_images_from_items(items)
+          raw_tweets = items
+            |> Enum.filter(fn item ->
+              text = String.trim(item["text"] || item["full_text"] || "")
+              # Keep tweets that have actual words beyond just a t.co link
+              word_count = text |> String.split(~r/\s+/) |> Enum.count(fn w -> not String.starts_with?(w, "https://") end)
+              word_count >= 5 and not String.starts_with?(text, "RT @")
+            end)
+            |> Enum.sort_by(fn item -> item["createdAt"] || "" end, :desc)
+            |> Enum.map(fn item ->
+              # Extract ALL photo URLs from this tweet's media array
+              media_list = item["media"] || get_in(item, ["extendedEntities", "media"]) || get_in(item, ["entities", "media"]) || []
+              photo_urls = media_list
+                |> Enum.filter(fn m -> m["type"] == "photo" end)
+                |> Enum.map(fn photo -> photo["media_url_https"] || photo["url"] || photo["media_url"] end)
+                |> Enum.reject(&is_nil/1)
+              Map.put(item, "all_photo_urls", photo_urls)
+            end)
+
+          Redix.command(:redix, ["SET", "presidential_x_tweets", Jason.encode!(raw_tweets), "EX", "259200"])
+          Logger.info("[DataMiner] Stored #{length(raw_tweets)} substantive tweets (3-day cache).")
+
+          x_section =
+            items
+            |> Enum.map(fn item ->
+              date = item["createdAt"] || item["created_at"] || ""
+              text = item["text"] || item["full_text"] || ""
+              "Date: #{date}\nTweet: #{text}"
+            end)
+            |> Enum.join("\n\n")
+            |> String.slice(0, @max_section_chars)
+
+          Logger.info("[DataMiner] X context fetched (#{byte_size(x_section)} chars). Regenerating context and buttons.")
+          store_merged_context(:x, x_section)
+          
+          # Extract images from the items
+          extract_images_from_items(items)
+        else
+          Logger.info("[DataMiner] No new tweets since last run. Skipping Groq/Gemini regeneration.")
+        end
 
       err ->
         Logger.error("[DataMiner] Apify X fetch failed: #{inspect(err)}")
@@ -111,8 +149,8 @@ defmodule PresidentialBridge.DataMiner do
         media_list = item["media"] || get_in(item, ["extendedEntities", "media"]) || get_in(item, ["entities", "media"]) || []
         
         # Get first photo URL
-        photo = Enum.find(media_list, fn m -> m["type"] == "photo" end)
-        if photo do
+        all_photos = Enum.filter(media_list, fn m -> m["type"] == "photo" end)
+        Enum.flat_map(all_photos, fn photo ->
           url = photo["media_url_https"] || photo["url"] || photo["media_url"]
           if url do
             text_lower = String.downcase(text)
@@ -122,10 +160,7 @@ defmodule PresidentialBridge.DataMiner do
           else
             []
           end
-        else
-          []
-        end
-      end)
+        end)
       
     if length(images) > 0 do
       Logger.info("[DataMiner] Extracted #{length(images)} images from X.")

@@ -239,7 +239,21 @@ defmodule PresidentialBridge.AIProxy do
     else
       @gemini_keys
     end
-    try_gemini_with_backoff(prompt, keys, 0)
+
+    used = case Redix.command(:redix, ["GET", "dataminer_gemini_tokens_used"]) do
+      {:ok, val} when is_binary(val) -> String.to_integer(val)
+      _ -> 0
+    end
+
+    if used >= 3 do
+      require Logger
+      Logger.warning("[DataMiner] Gemini semaphore: 3 keys already used this cycle. Aborting to preserve user keys.")
+      {:error, :semaphore_limit}
+    else
+      Redix.command(:redix, ["INCR", "dataminer_gemini_tokens_used"])
+      Redix.command(:redix, ["EXPIRE", "dataminer_gemini_tokens_used", "3600"])
+      try_gemini_with_backoff(prompt, keys, 0)
+    end
   end
 
   # ─── On-Demand Single Language Translator ──────────────────────────────────
