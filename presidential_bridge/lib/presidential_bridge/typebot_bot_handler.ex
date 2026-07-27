@@ -156,7 +156,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
             end
           end)
 
-        String.match?(msg_lower, ~r/next 🔥$/) and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
+        String.match?(msg_lower, ~r/next 🔥$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
           current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
           current_index = String.to_integer(current_index_str)
