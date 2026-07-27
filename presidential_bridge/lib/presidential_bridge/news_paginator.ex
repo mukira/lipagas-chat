@@ -50,37 +50,38 @@ defmodule PresidentialBridge.NewsPaginator do
     fallback_headline = if String.length(clean_text) > 100, do: String.slice(clean_text, 0, 100), else: clean_text
     
     hash = :crypto.hash(:md5, clean_text) |> Base.encode16(case: :lower)
-    cache_key = "overlay_headline:#{hash}"
+    cache_key = "overlay_headline_v2:#{hash}"
 
     case Redix.command(:redix, ["GET", cache_key]) do
       {:ok, val} when is_binary(val) ->
         case Jason.decode(val) do
-          {:ok, %{"headline" => h, "subtitle" => s}} -> {h, s}
-          _ -> {fallback_headline, ""}
+          {:ok, %{"headline" => h, "subtitle" => s, "body" => b}} -> {h, s, b}
+          _ -> {fallback_headline, "", fallback_headline}
         end
       _ ->
         prompt = """
-        You are a WhatsApp news card writer for Kenya's Presidential bot.
-        Given this tweet text, write:
-        1. A headline (max 10 words, punchy, no truncation)
-        2. A subtitle (max 6 words, the date/context if visible, e.g. "Wed Jul 22, State House")
+        You are the ghostwriter for Kenya's Presidential WhatsApp bot. 
+        Given this raw tweet text, extract and rewrite the information into three parts:
+        1. "headline": A punchy headline (max 10 words, no truncation).
+        2. "subtitle": A short context tag (max 6 words, e.g. "Wed Jul 22, State House").
+        3. "body": A casual, conversational, and highly engaging rewrite of the news (up to 100 words). It must sound like the President of Kenya messaging a citizen directly as a friend on WhatsApp. Use first-person ("I", "we") and include a few tasteful, professional emojis to make it feel natural and engaging. Do NOT sound like a stiff press release.
 
         Tweet: #{text}
 
-        Respond ONLY in valid JSON: {"headline": "...", "subtitle": "..."}
+        Respond ONLY in valid JSON: {"headline": "...", "subtitle": "...", "body": "..."}
         """
         
         case PresidentialBridge.AIProxy.call_groq_json_round_robin(prompt) do
           {:ok, reply} ->
             cleaned = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
             case Jason.decode(cleaned) do
-              {:ok, parsed = %{"headline" => h, "subtitle" => s}} ->
+              {:ok, parsed = %{"headline" => h, "subtitle" => s, "body" => b}} ->
                 # Cache for 3 days
                 Redix.command(:redix, ["SET", cache_key, Jason.encode!(parsed), "EX", "259200"])
-                {h, s}
-              _ -> {fallback_headline, ""}
+                {h, s, b}
+              _ -> {fallback_headline, "", fallback_headline}
             end
-          _ -> {fallback_headline, ""}
+          _ -> {fallback_headline, "", fallback_headline}
         end
     end
   end

@@ -850,8 +850,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_last = display_index >= total_count
       button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🔥"
 
-      # Generate AI headline/subtitle lazily for the image overlay
-      {ai_headline, ai_subtitle} = PresidentialBridge.NewsPaginator.generate_headline_for_overlay(item["detail"] || "")
+      # Generate AI headline/subtitle/body lazily for the image overlay and text message
+      {ai_headline, ai_subtitle, ai_body} = PresidentialBridge.NewsPaginator.generate_headline_for_overlay(item["detail"] || "")
 
       # Generate overlay URLs in parallel
       overlay_urls = item["image_urls"]
@@ -862,15 +862,13 @@ defmodule PresidentialBridge.TypebotBotHandler do
            )
         |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
         |> Enum.reject(&is_nil/1)
-
-      clean_detail = if String.length(item["detail"] || "") > 900, do: String.slice(item["detail"], 0, 900) <> "...", else: item["detail"] || ""
       
       text_body = """
-      📅 #{item["subtitle"]}
+      📅 #{ai_subtitle}
 
-      *#{item["headline"]}*
+      *#{ai_headline}*
 
-      #{clean_detail}
+      #{ai_body}
       """
 
       fallback_url = "https://res.cloudinary.com/dtg0cguld/image/upload/v1727787320/ruto-flag-square_n3p9hx.jpg"
