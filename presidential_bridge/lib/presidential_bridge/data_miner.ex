@@ -289,7 +289,7 @@ defmodule PresidentialBridge.DataMiner do
             Do this for as many Kenyan languages as possible (aim for 48).
             """
             
-            case PresidentialBridge.AIProxy.call_gemini_round_robin(gemini_prompt) do
+            case PresidentialBridge.AIProxy.call_dataminer_gemini(gemini_prompt) do
               {:ok, reply} ->
                 cleaned_json = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
                 
@@ -328,7 +328,7 @@ defmodule PresidentialBridge.DataMiner do
                     Respond ONLY with a valid JSON object matching the keys: "full_news_sw", "full_news_sh".
                     """
                     
-                    case PresidentialBridge.AIProxy.call_gemini_round_robin(full_news_prompt) do
+                    case PresidentialBridge.AIProxy.call_dataminer_gemini(full_news_prompt) do
                       {:ok, full_news_reply} ->
                         cleaned_fn = full_news_reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
                         case Jason.decode(cleaned_fn) do
@@ -353,7 +353,7 @@ defmodule PresidentialBridge.DataMiner do
         end
       {:error, reason} ->
         Logger.error("[DataMiner] Groq generation failed: #{inspect(reason)}. Falling back to Gemini...")
-        case PresidentialBridge.AIProxy.call_gemini_round_robin(groq_prompt) do
+        case PresidentialBridge.AIProxy.call_dataminer_gemini(groq_prompt) do
           {:ok, gemini_fallback_str} ->
             cleaned_fallback = gemini_fallback_str |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
             case Jason.decode(cleaned_fallback) do
@@ -373,7 +373,7 @@ defmodule PresidentialBridge.DataMiner do
                 Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary".
                 """
 
-                case PresidentialBridge.AIProxy.call_gemini_round_robin(gemini_prompt) do
+                case PresidentialBridge.AIProxy.call_dataminer_gemini(gemini_prompt) do
                   {:ok, trans_reply} ->
                     cleaned_trans = trans_reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
                     case Jason.decode(cleaned_trans) do
@@ -449,7 +449,7 @@ defmodule PresidentialBridge.DataMiner do
     #{summary}
     """
 
-    case PresidentialBridge.AIProxy.call_gemini_round_robin(prompt) do
+    case PresidentialBridge.AIProxy.call_dataminer_gemini(prompt) do
       {:ok, reply} ->
         if String.contains?(String.upcase(reply), "NEGATIVE") do
           alert_pr_team(summary)

@@ -13,14 +13,12 @@ defmodule PresidentialBridge.AIProxy do
   @groq_keys [
     System.get_env("GROQ_KEY_1") || "gsk_dummy",
     System.get_env("GROQ_KEY_2") || "gsk_dummy",
-    System.get_env("GROQ_KEY_3") || "gsk_dummy"
+    System.get_env("GROQ_KEY_3") || "gsk_dummy",
+    System.get_env("GROQ_KEY_4") || "gsk_dummy"
   ]
   @groq_key_count length(@groq_keys)
 
-  @gemini_keys [
-    System.get_env("GEMINI_KEY_1") || "AQ_dummy",
-    System.get_env("GEMINI_KEY_2") || "AQ_dummy"
-  ]
+  @gemini_keys Enum.map(1..13, fn i -> System.get_env("GEMINI_KEY_#{i}") || "AQ_dummy" end)
   @gemini_key_count length(@gemini_keys)
 
   # Max chars of news context to inject per LLM call (~750 tokens)
@@ -231,6 +229,18 @@ defmodule PresidentialBridge.AIProxy do
     try_gemini_with_backoff(prompt, keys_in_order, 0)
   end
 
+  # ─── Dedicated DataMiner Gemini Key ────────────────────────────────────────
+
+  def call_dataminer_gemini(prompt) do
+    key = System.get_env("DATAMINER_GEMINI_KEY")
+    if key && key != "" do
+      try_gemini_with_backoff(prompt, [key], 0)
+    else
+      Logger.error("[AIProxy] DATAMINER_GEMINI_KEY not set. Falling back to round-robin pool.")
+      call_gemini_round_robin(prompt)
+    end
+  end
+
   defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}
 
   defp try_gemini_with_backoff(prompt, [key | rest], attempt) do
@@ -270,6 +280,6 @@ defmodule PresidentialBridge.AIProxy do
 
   defp build_cache_key(message) do
     hash = :crypto.hash(:md5, String.downcase(String.trim(message))) |> Base.encode16(case: :lower)
-    "llm_cache:#{hash}"
+    "llm_cache_v2:#{hash}"
   end
 end

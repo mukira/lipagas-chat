@@ -275,6 +275,11 @@ defmodule PresidentialBridge.Router do
         conn
         |> put_resp_content_type("application/json")
         |> send_resp(200, Jason.encode!(%{reply: reply}))
+      {:error, :all_keys_exhausted} ->
+        fallback_msg = "🙏 I'm sorry, I'm experiencing an unusually high volume of questions right now and my systems are fully occupied. Please try asking again in a few moments."
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{reply: fallback_msg}))
       {:error, reason} ->
         conn
         |> put_resp_content_type("application/json")
