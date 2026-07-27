@@ -258,19 +258,17 @@ defmodule PresidentialBridge.AIProxy do
 
   # ─── On-Demand Single Language Translator ──────────────────────────────────
 
-  def translate_for_language(lang, en_button, en_summary_json) do
+  def translate_for_language(lang, en_summary_json) do
     prompt = """
     You are an expert translator specializing in ALL Kenyan ethnic languages.
-    Translate this English button label and news summary into #{String.capitalize(lang)}.
+    Translate this English news summary into #{String.capitalize(lang)}.
     
-    Button: #{en_button}
     Summary: #{en_summary_json}
     
     Constraints:
-    - Button MUST start with ONE emoji and be under 20 chars total.
     - Summary MUST be a JSON array exactly mirroring the input structure, but translated. Maintain the warm, first-person voice of President William Ruto speaking directly to the citizen.
     - Return ONLY a valid JSON object matching this exact format:
-      {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]}
+      {"summary": [{"title": "...", "subtitle": "...", "detail": "..."}]}
     """
     call_gemini_round_robin(prompt)
   end

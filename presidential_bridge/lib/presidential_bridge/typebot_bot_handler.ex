@@ -384,7 +384,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
     end
 
     # Fetch core English data and hash
-    dynamic_btn_en = Redix.command!(:redix, ["GET", "dynamic_btn_en"]) || "News"
+    dynamic_btn_en = "📰 President's Updates"
     dynamic_summary = Redix.command!(:redix, ["GET", "dynamic_summary"]) || "[]"
     content_hash = Redix.command!(:redix, ["GET", "dynamic_content_hash"]) || "none"
 
@@ -393,12 +393,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
     # Pre-translated Swahili and Sheng
     sw_raw = Redix.command!(:redix, ["GET", "trans_cache:kiswahili:#{content_hash}"])
     sw_data = if sw_raw, do: Jason.decode!(sw_raw), else: %{}
-    dynamic_btn_sw = Map.get(sw_data, "button", "Habari")
+    dynamic_btn_sw = "📰 Taarifa za Rais"
     dynamic_summary_sw = (if is_binary(Map.get(sw_data, "summary", "")), do: Map.get(sw_data, "summary", ""), else: Jason.encode!(Map.get(sw_data, "summary", ""))) <> channel_link
 
     sh_raw = Redix.command!(:redix, ["GET", "trans_cache:sheng:#{content_hash}"])
     sh_data = if sh_raw, do: Jason.decode!(sh_raw), else: %{}
-    dynamic_btn_sh = Map.get(sh_data, "button", "Riba")
+    dynamic_btn_sh = "📰 Rada ya Prezzo"
     dynamic_summary_sh = (if is_binary(Map.get(sh_data, "summary", "")), do: Map.get(sh_data, "summary", ""), else: Jason.encode!(Map.get(sh_data, "summary", ""))) <> channel_link
 
     # On-Demand translation check for persistent language
@@ -421,12 +421,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
           {btn, summ <> channel_link}
         _ ->
           IO.puts("[TypebotBotHandler] Cache MISS for language: #{persistent_lang} — translating on demand...")
-          case PresidentialBridge.AIProxy.translate_for_language(persistent_lang, dynamic_btn_en, dynamic_summary) do
+          case PresidentialBridge.AIProxy.translate_for_language(persistent_lang, dynamic_summary) do
             {:ok, reply} ->
               cleaned = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
               Redix.command(:redix, ["SET", cache_key, cleaned])
               lang_data = Jason.decode!(cleaned)
-              btn = Map.get(lang_data, "button", dynamic_btn_en)
+              btn = dynamic_btn_en
               summ = (if is_binary(Map.get(lang_data, "summary", "")), do: Map.get(lang_data, "summary", ""), else: Jason.encode!(Map.get(lang_data, "summary", "")))
               {btn, summ <> channel_link}
             _ ->
