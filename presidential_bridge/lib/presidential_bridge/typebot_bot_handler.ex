@@ -166,14 +166,19 @@ defmodule PresidentialBridge.TypebotBotHandler do
             end
           end)
 
-        (msg_lower == "show first update 🚀" or String.match?(msg_lower, ~r/next 🔥$/)) and Redix.command!(:redix, ["GET", "news_queue:#{phone}"]) != nil ->
+        (msg_lower == "show first update 🚀" or String.match?(msg_lower, ~r/next 🔥$/) or msg_lower == "🔙 back") and Redix.command!(:redix, ["GET", "news_queue:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting News Pagination")
           is_start = msg_lower == "show first update 🚀"
+          is_back = msg_lower == "🔙 back"
           
           current_index_str = Redix.command!(:redix, ["GET", "news_index:#{phone}"]) || "-1"
           current_index = String.to_integer(current_index_str)
           
-          next_index = if is_start, do: 0, else: current_index + 1
+          next_index = cond do
+            is_start -> 0
+            is_back -> max(0, current_index - 1)
+            true -> current_index + 1
+          end
           Redix.command!(:redix, ["SET", "news_index:#{phone}", to_string(next_index), "EX", "86400"])
 
           raw_queue = Redix.command!(:redix, ["GET", "news_queue:#{phone}"])
@@ -181,11 +186,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           Task.start(fn -> send_news_card(phone, meta, next_index, queue) end)
 
-        String.match?(msg_lower, ~r/next 🏗️$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
-          IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
+        (String.match?(msg_lower, ~r/next 🏗️$/) or msg_lower == "🔙 back") and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
+          IO.puts("[TypebotBotHandler] Intercepting Projects Next/Back button click")
+          is_back = msg_lower == "🔙 back"
           current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
           current_index = String.to_integer(current_index_str)
-          next_index = current_index + 1
+          next_index = if is_back, do: max(0, current_index - 1), else: current_index + 1
           Redix.command!(:redix, ["SET", "projects_index:#{phone}", to_string(next_index), "EX", "3600"])
 
           raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
@@ -224,12 +230,17 @@ defmodule PresidentialBridge.TypebotBotHandler do
                 },
                 body: %{text: text_body},
                 action: %{
-                  buttons: [
-                    %{
-                      type: "reply",
-                      reply: %{id: button_label, title: button_label}
-                    }
-                  ]
+                  buttons: 
+                    if display_index > 1 do
+                      [
+                        %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
+                        %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                      ]
+                    else
+                      [
+                        %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                      ]
+                    end
                 }
               }
             }
@@ -871,7 +882,17 @@ defmodule PresidentialBridge.TypebotBotHandler do
             header: %{type: "image", image: %{link: url}},
             body: %{text: text_body},
             action: %{
-              buttons: [%{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}]
+              buttons: 
+                if display_index > 1 do
+                  [
+                    %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
+                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                  ]
+                else
+                  [
+                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                  ]
+                end
             }
           }
         }
@@ -895,7 +916,17 @@ defmodule PresidentialBridge.TypebotBotHandler do
             type: "button",
             body: %{text: text_body},
             action: %{
-              buttons: [%{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}]
+              buttons: 
+                if display_index > 1 do
+                  [
+                    %{type: "reply", reply: %{id: "🔙 Back", title: "🔙 Back"}},
+                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                  ]
+                else
+                  [
+                    %{type: "reply", reply: %{id: button_label, title: String.slice(button_label, 0, 20)}}
+                  ]
+                end
             }
           }
         }
