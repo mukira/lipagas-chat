@@ -171,6 +171,7 @@ defmodule PresidentialBridge.DataMiner do
             []
           end
         end)
+      end)
       
     if length(images) > 0 do
       Logger.info("[DataMiner] Extracted #{length(images)} images from X.")
