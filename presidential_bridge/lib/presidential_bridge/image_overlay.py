@@ -70,8 +70,8 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
     font_bold_path = download_font("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf", "/tmp/Roboto-Bold.ttf")
     font_reg_path = download_font("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf", "/tmp/Roboto-Regular.ttf")
     
-    font_bold = ImageFont.truetype(font_bold_path, 48)
-    font_reg = ImageFont.truetype(font_reg_path, 32)
+    font_bold = ImageFont.truetype(font_bold_path, 60)
+    font_reg = ImageFont.truetype(font_reg_path, 36)
     
     # 10% padding left and right -> 80% available width
     text_x = int(target_width * 0.1)
@@ -110,14 +110,14 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
         gradient.putpixel((0, y), alpha)
     gradient = gradient.resize((target_width, target_height))
     
-    # Base color is deep navy blue instead of pure black
-    navy_blue = Image.new('RGBA', (target_width, target_height), (10, 17, 40, 255))
-    img.paste(navy_blue, (0, 0), gradient)
+    # Base color is pure black
+    overlay_black = Image.new('RGBA', (target_width, target_height), (0, 0, 0, 255))
+    img.paste(overlay_black, (0, 0), gradient)
     
     # Calculate base layout so text fits with exactly 10% padding from the bottom edge
     bottom_padding = int(target_height * 0.1)
-    headline_height = len(headline_lines) * 60
-    subtitle_height = len(subtitle_lines) * 40 if len(subtitle_lines) > 0 else 0
+    headline_height = len(headline_lines) * 72
+    subtitle_height = len(subtitle_lines) * 46 if len(subtitle_lines) > 0 else 0
     total_text_height = headline_height + subtitle_height
         
     start_y = target_height - bottom_padding - total_text_height
@@ -126,13 +126,13 @@ def composite_image(image_url, headline, subtitle, output_path, logo_path):
     current_y = start_y
     for line in headline_lines:
         draw.text((text_x, current_y), line, font=font_bold, fill=(255, 255, 255, 255))
-        current_y += 60
+        current_y += 72
     
     # Subtitle
     if len(subtitle_lines) > 0:
         for line in subtitle_lines:
             draw.text((text_x, current_y), line, font=font_reg, fill=(200, 200, 200, 255))
-            current_y += 40
+            current_y += 46
 
     # Save output temporarily
     final_img = img.convert("RGB") # Drop alpha before saving as JPEG
