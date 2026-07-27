@@ -18,7 +18,8 @@ defmodule PresidentialBridge.AIProxy do
   ]
   @groq_key_count length(@groq_keys)
 
-  @gemini_keys Enum.map(1..13, fn i -> System.get_env("GEMINI_KEY_#{i}") || "AQ_dummy" end)
+  @gemini_keys Enum.map(1..13, fn i -> System.get_env("GEMINI_KEY_#{i}") end)
+               |> Enum.filter(fn k -> is_binary(k) and String.starts_with?(k, "AIza") end)
   @gemini_key_count length(@gemini_keys)
 
   # Max chars of news context to inject per LLM call (~750 tokens)
@@ -233,12 +234,31 @@ defmodule PresidentialBridge.AIProxy do
 
   def call_dataminer_gemini(prompt) do
     key = System.get_env("DATAMINER_GEMINI_KEY")
-    if key && key != "" do
-      try_gemini_with_backoff(prompt, [key], 0)
+    keys = if key && key != "" && String.starts_with?(key, "AIza") do
+      [key | (@gemini_keys -- [key])]
     else
-      Logger.error("[AIProxy] DATAMINER_GEMINI_KEY not set. Falling back to round-robin pool.")
-      call_gemini_round_robin(prompt)
+      @gemini_keys
     end
+    try_gemini_with_backoff(prompt, keys, 0)
+  end
+
+  # ─── On-Demand Single Language Translator ──────────────────────────────────
+
+  def translate_for_language(lang, en_button, en_summary_json) do
+    prompt = """
+    You are an expert translator specializing in ALL Kenyan ethnic languages.
+    Translate this English button label and news summary into #{String.capitalize(lang)}.
+    
+    Button: #{en_button}
+    Summary: #{en_summary_json}
+    
+    Constraints:
+    - Button MUST start with ONE emoji and be under 20 chars total.
+    - Summary MUST be a JSON array exactly mirroring the input structure, but translated. Maintain the warm, first-person voice of President William Ruto speaking directly to the citizen.
+    - Return ONLY a valid JSON object matching this exact format:
+      {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]}
+    """
+    call_gemini_round_robin(prompt)
   end
 
   defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}

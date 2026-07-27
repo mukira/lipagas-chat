@@ -267,89 +267,52 @@ defmodule PresidentialBridge.DataMiner do
         
         case Jason.decode(cleaned_groq) do
           {:ok, groq_json} ->
-            Logger.info("[DataMiner] Step 2: Translating summary into 48 languages using Gemini...")
-            gemini_prompt = """
-            You are an expert translator specializing in ALL Kenyan ethnic languages.
-            I have an English button and a summary array composed of titles, subtitles, and details. I need you to translate them into 48 Kenyan languages, including but not limited to:
-            Kiswahili, Sheng, Kikuyu, Luo, Kalenjin, Kamba, Gusii, Meru, Mijikenda, Somali, Turkana, Maasai, Embu, Taita, Pokot, Kuria, Borana, Rendille, Samburu, etc.
+            en_button = groq_json["en_button"] || ""
+            summary_en = groq_json["summary_en"] || []
+            summary_en_json = Jason.encode!(summary_en)
             
-            Button constraints: MUST start with ONE emoji, MUST be under 20 chars total.
-            Summary constraints: Translate the "title", "subtitle", and "detail" fields of each item in the array. You MUST maintain the warm, first-person voice of President William Ruto speaking directly to the citizen in all translations.
+            content_fingerprint = :crypto.hash(:md5, en_button <> summary_en_json) |> Base.encode16(case: :lower)
             
-            Input JSON:
-            #{Jason.encode!(groq_json)}
+            old_fingerprint = redis_get("dynamic_content_hash", "")
+            content_changed = content_fingerprint != old_fingerprint
             
-            Respond ONLY with a valid JSON object where the keys are the language names (lowercase) and the values are objects containing "button" and "summary" (which should be an array of the translated items).
-            Example:
-            {
-              "english": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]},
-              "kiswahili": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]},
-              "sheng": {"button": "...", "summary": [{"title": "...", "subtitle": "...", "detail": "..."}]}
-            }
-            Do this for as many Kenyan languages as possible (aim for 48).
-            """
+            Redix.command(:redix, ["SET", "dynamic_btn_en", en_button])
+            Redix.command(:redix, ["SET", "dynamic_summary", summary_en_json])
+            Redix.command(:redix, ["SET", "dynamic_content_hash", content_fingerprint])
+            Logger.info("[DataMiner] English button and summary saved immediately.")
             
-            case PresidentialBridge.AIProxy.call_dataminer_gemini(gemini_prompt) do
-              {:ok, reply} ->
-                cleaned_json = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
-                
-                case Jason.decode(cleaned_json) do
-                  {:ok, gemini_json} ->
-                    # Inject the English original so it's always there
-                    final_map = Map.put(gemini_json, "english", %{
-                      "button" => groq_json["en_button"] || "",
-                      "summary" => groq_json["summary_en"] || ""
-                    })
-                    
-                    Redix.command(:redix, ["SET", "dynamic_news_translations", Jason.encode!(final_map)])
-                    
-                    # Keep backward compatibility for the existing 3 groups to not break the Typebot immediately
-                    sw_data = Map.get(gemini_json, "kiswahili", %{})
-                    sh_data = Map.get(gemini_json, "sheng", %{})
-                    Redix.command(:redix, ["SET", "dynamic_btn_en", groq_json["en_button"] || ""])
-                    Redix.command(:redix, ["SET", "dynamic_btn_sw", Map.get(sw_data, "button", "Swahili Update")])
-                    Redix.command(:redix, ["SET", "dynamic_btn_sh", Map.get(sh_data, "button", "Sheng Update")])
-                    Redix.command(:redix, ["SET", "dynamic_summary", groq_json["summary_en"] || ""])
-                    Redix.command(:redix, ["SET", "dynamic_summary_sw", Map.get(sw_data, "summary", "")])
-                    Redix.command(:redix, ["SET", "dynamic_summary_sh", Map.get(sh_data, "summary", "")])
-                    
-                    Logger.info("[DataMiner] 48-Language Dynamic translations saved successfully.")
-
-                    # --- Step 3: Translate Full News separately to avoid Gemini timeouts ---
-                    Logger.info("[DataMiner] Step 3: Translating Full News into Swahili and Sheng...")
-                    full_news_prompt = """
-                    You are an expert translator specializing in Kenyan languages.
-                    Translate the following highly-positive PR update into Kiswahili and Sheng.
-                    Maintain the exact structural formatting (WhatsApp bold *Title*, bullet points, and clear separators).
-                    
-                    Text to translate:
-                    #{groq_json["full_news_en"] || "No updates available."}
-                    
-                    Respond ONLY with a valid JSON object matching the keys: "full_news_sw", "full_news_sh".
-                    """
-                    
-                    case PresidentialBridge.AIProxy.call_dataminer_gemini(full_news_prompt) do
-                      {:ok, full_news_reply} ->
-                        cleaned_fn = full_news_reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
-                        case Jason.decode(cleaned_fn) do
-                          {:ok, fn_json} ->
-                            Redix.command(:redix, ["SET", "dynamic_full_news_en", groq_json["full_news_en"] || ""])
-                            Redix.command(:redix, ["SET", "dynamic_full_news_sw", fn_json["full_news_sw"] || ""])
-                            Redix.command(:redix, ["SET", "dynamic_full_news_sh", fn_json["full_news_sh"] || ""])
-                            Logger.info("[DataMiner] Full News translations saved successfully.")
-                          _ -> Logger.error("[DataMiner] Failed to decode Full News JSON: #{cleaned_fn}")
-                        end
-                      _ -> Logger.error("[DataMiner] Full News Gemini translation failed.")
-                    end
-
-                  _ ->
-                    Logger.error("[DataMiner] Failed to decode Gemini 48-lang JSON: #{cleaned_json}")
+            if content_changed do
+              Logger.info("[DataMiner] Content changed - invalidating translation cache.")
+              Redix.command(:redix, ["DEL", "dynamic_news_translations"])
+              
+              case Redix.command(:redix, ["KEYS", "trans_cache:*"]) do
+                {:ok, keys} when keys != [] -> Redix.command(:redix, ["DEL"] ++ keys)
+                _ -> :ok
+              end
+              
+              Logger.info("[DataMiner] Pre-translating Kiswahili and Sheng...")
+              Task.start(fn ->
+                case PresidentialBridge.AIProxy.translate_for_language("kiswahili", en_button, summary_en_json) do
+                  {:ok, sw_reply} ->
+                    sw_json_str = sw_reply |> String.replace(~r/```json
+?/, "") |> String.replace(~r/```/, "") |> String.trim()
+                    Redix.command(:redix, ["SET", "trans_cache:kiswahili:\#{content_fingerprint}", sw_json_str])
+                  _ -> :ok
                 end
-              _ ->
-                Logger.error("[DataMiner] Gemini translation failed.")
+                
+                case PresidentialBridge.AIProxy.translate_for_language("sheng", en_button, summary_en_json) do
+                  {:ok, sh_reply} ->
+                    sh_json_str = sh_reply |> String.replace(~r/```json
+?/, "") |> String.replace(~r/```/, "") |> String.trim()
+                    Redix.command(:redix, ["SET", "trans_cache:sheng:\#{content_fingerprint}", sh_json_str])
+                  _ -> :ok
+                end
+              end)
+            else
+              Logger.info("[DataMiner] Content fingerprint unchanged. No translations needed.")
             end
-            
-          _ -> Logger.error("[DataMiner] Failed to decode Groq JSON: #{groq_json_str}")
+
+          _ -> Logger.error("[DataMiner] Failed to decode Groq JSON: \#{groq_json_str}")
         end
       {:error, reason} ->
         Logger.error("[DataMiner] Groq generation failed: #{inspect(reason)}. Falling back to Gemini...")

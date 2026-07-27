@@ -368,36 +368,58 @@ defmodule PresidentialBridge.TypebotBotHandler do
       end
     end
 
-    # Dynamic Buttons & Summaries (Fetch from the 48-language JSON map in Redis)
-    dynamic_translations = case Redix.command(:redix, ["GET", "dynamic_news_translations"]) do
-      {:ok, val} when is_binary(val) and val != "" -> 
-        case Jason.decode(val) do
-          {:ok, json} -> json
-          _ -> %{}
-        end
-      _ -> %{}
-    end
-
-    en_data = Map.get(dynamic_translations, "english", %{})
-    sw_data = Map.get(dynamic_translations, "kiswahili", %{})
-    sh_data = Map.get(dynamic_translations, "sheng", %{})
-
-    dynamic_btn_en = Map.get(en_data, "button", "News")
-    dynamic_btn_sw = Map.get(sw_data, "button", "Habari")
-    dynamic_btn_sh = Map.get(sh_data, "button", "Riba")
+    # Fetch core English data and hash
+    dynamic_btn_en = Redix.command!(:redix, ["GET", "dynamic_btn_en"]) || "News"
+    dynamic_summary = Redix.command!(:redix, ["GET", "dynamic_summary"]) || "[]"
+    content_hash = Redix.command!(:redix, ["GET", "dynamic_content_hash"]) || "none"
 
     channel_link = "\n\n📢 *Want to get these updates directly?* Join the President's official WhatsApp Channel here: https://whatsapp.com/channel/0029VbCLeJXJpe8ZJPvxlY05"
 
-    encode_summary = fn data ->
-      case Map.get(data, "summary", "") do
-        val when is_binary(val) -> val
-        val -> Jason.encode!(val)
+    # Pre-translated Swahili and Sheng
+    sw_raw = Redix.command!(:redix, ["GET", "trans_cache:kiswahili:#{content_hash}"])
+    sw_data = if sw_raw, do: Jason.decode!(sw_raw), else: %{}
+    dynamic_btn_sw = Map.get(sw_data, "button", "Habari")
+    dynamic_summary_sw = (if is_binary(Map.get(sw_data, "summary", "")), do: Map.get(sw_data, "summary", ""), else: Jason.encode!(Map.get(sw_data, "summary", ""))) <> channel_link
+
+    sh_raw = Redix.command!(:redix, ["GET", "trans_cache:sheng:#{content_hash}"])
+    sh_data = if sh_raw, do: Jason.decode!(sh_raw), else: %{}
+    dynamic_btn_sh = Map.get(sh_data, "button", "Riba")
+    dynamic_summary_sh = (if is_binary(Map.get(sh_data, "summary", "")), do: Map.get(sh_data, "summary", ""), else: Jason.encode!(Map.get(sh_data, "summary", ""))) <> channel_link
+
+    # On-Demand translation check for persistent language
+    persistent_lang = Session.get_language(phone) || "english"
+    persistent_lang = String.downcase(String.trim(persistent_lang))
+    
+    # Clean emoji from language name if present
+    persistent_lang = Regex.replace(~r/^[\s\p{Emoji}]+/u, persistent_lang, "")
+
+    {final_btn_en, final_summary_en} = if persistent_lang in ["english", "kiswahili", "sheng", "other"] do
+      {dynamic_btn_en, dynamic_summary <> channel_link}
+    else
+      cache_key = "trans_cache:#{persistent_lang}:#{content_hash}"
+      case Redix.command(:redix, ["GET", cache_key]) do
+        {:ok, val} when is_binary(val) and val != "" ->
+          IO.puts("[TypebotBotHandler] Cache HIT for language: #{persistent_lang}")
+          lang_data = Jason.decode!(val)
+          btn = Map.get(lang_data, "button", dynamic_btn_en)
+          summ = (if is_binary(Map.get(lang_data, "summary", "")), do: Map.get(lang_data, "summary", ""), else: Jason.encode!(Map.get(lang_data, "summary", "")))
+          {btn, summ <> channel_link}
+        _ ->
+          IO.puts("[TypebotBotHandler] Cache MISS for language: #{persistent_lang} — translating on demand...")
+          case PresidentialBridge.AIProxy.translate_for_language(persistent_lang, dynamic_btn_en, dynamic_summary) do
+            {:ok, reply} ->
+              cleaned = reply |> String.replace(~r/```json\n?/, "") |> String.replace(~r/```/, "") |> String.trim()
+              Redix.command(:redix, ["SET", cache_key, cleaned])
+              lang_data = Jason.decode!(cleaned)
+              btn = Map.get(lang_data, "button", dynamic_btn_en)
+              summ = (if is_binary(Map.get(lang_data, "summary", "")), do: Map.get(lang_data, "summary", ""), else: Jason.encode!(Map.get(lang_data, "summary", "")))
+              {btn, summ <> channel_link}
+            _ ->
+              IO.puts("[TypebotBotHandler] Translation failed for #{persistent_lang}. Falling back to English.")
+              {dynamic_btn_en, dynamic_summary <> channel_link}
+          end
       end
     end
-
-    dynamic_summary_en = encode_summary.(en_data) <> channel_link
-    dynamic_summary_sw = encode_summary.(sw_data) <> channel_link
-    dynamic_summary_sh = encode_summary.(sh_data) <> channel_link
 
     prefilled_vars = %{
       "user_name" => user_name,
@@ -405,10 +427,10 @@ defmodule PresidentialBridge.TypebotBotHandler do
       "phone_number" => phone,
       "latest_news" => latest_news,
       "greeting_index" => to_string(greeting_index),
-      "dynamic_btn_en" => dynamic_btn_en,
+      "dynamic_btn_en" => final_btn_en,
       "dynamic_btn_sw" => dynamic_btn_sw,
       "dynamic_btn_sh" => dynamic_btn_sh,
-      "dynamic_summary" => dynamic_summary_en,
+      "dynamic_summary" => final_summary_en,
       "dynamic_summary_sw" => dynamic_summary_sw,
       "dynamic_summary_sh" => dynamic_summary_sh,
       "news_count" => "0"
