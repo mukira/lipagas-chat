@@ -84,7 +84,7 @@ defmodule PresidentialBridge.DataMiner do
           newest_id = items |> Enum.max_by(& &1["id"] || "0") |> Map.get("id")
           if newest_id, do: Redix.command(:redix, ["SET", "last_seen_tweet_id", newest_id])
 
-          raw_tweets = items
+          new_raw_tweets = items
             |> Enum.filter(fn item ->
               text = String.trim(item["text"] || item["full_text"] || "")
               # Keep tweets that have actual words beyond just a t.co link
@@ -102,8 +102,18 @@ defmodule PresidentialBridge.DataMiner do
               Map.put(item, "all_photo_urls", photo_urls)
             end)
 
-          Redix.command(:redix, ["SET", "presidential_x_tweets", Jason.encode!(raw_tweets), "EX", "259200"])
-          Logger.info("[DataMiner] Stored #{length(raw_tweets)} substantive tweets (3-day cache).")
+          existing_raw = case Redix.command(:redix, ["GET", "presidential_x_tweets"]) do
+            {:ok, val} when is_binary(val) -> Jason.decode!(val)
+            _ -> []
+          end
+          
+          # Combine and keep newest first, max 72
+          combined_tweets = (new_raw_tweets ++ existing_raw)
+            |> Enum.uniq_by(fn t -> t["id"] end)
+            |> Enum.take(72)
+
+          Redix.command(:redix, ["SET", "presidential_x_tweets", Jason.encode!(combined_tweets), "EX", "259200"])
+          Logger.info("[DataMiner] Stored #{length(combined_tweets)} substantive tweets (3-day cache).")
 
           x_section =
             items
