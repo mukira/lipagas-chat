@@ -457,7 +457,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
     persistent_lang = String.downcase(String.trim(persistent_lang))
     
     # Clean emoji and leading spaces from language name if present
-    persistent_lang = String.replace(persistent_lang, ~r/^[^\p{L}]+/, "")
+    persistent_lang = String.replace(persistent_lang, ~r/^[^\p{L}]+/u, "")
 
     {final_btn_en, final_summary_en} = if persistent_lang in ["english", "kiswahili", "sheng", "other"] do
       {dynamic_btn_en, dynamic_summary <> channel_link}
