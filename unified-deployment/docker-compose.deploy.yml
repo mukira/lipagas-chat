@@ -112,6 +112,13 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/html/planna-logo.webp:/usr/share/nginx/html/planna-logo.webp:ro
+      - ./nginx/html/planna-logo-icon.webp:/usr/share/nginx/html/planna-logo-icon.webp:ro
+      - ./nginx/html/planna-favicon.ico:/usr/share/nginx/html/planna-favicon.ico:ro
+      - ./nginx/html/planna-apple-touch-icon.png:/usr/share/nginx/html/planna-apple-touch-icon.png:ro
+      - ./nginx/html/planna-theme.css:/usr/share/nginx/html/planna-theme.css:ro
+      - ./nginx/html/avatars:/usr/share/nginx/html/avatars:ro
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     depends_on:

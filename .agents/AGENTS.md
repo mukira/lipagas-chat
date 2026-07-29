@@ -27,3 +27,10 @@ When generating image overlays that require strict character limits (to prevent 
 When intercepting Typebot button clicks in Elixir, remember that pagination or dynamic buttons often include prefixes (e.g., `"2/9 Next 🔥"`).
 - **Never use strict equality (`==`)** for intercepting dynamic buttons unless you are certain the string is static.
 - **Always use Regex suffix matching** (e.g., `String.match?(msg_lower, ~r/next 🔥$/)`) to safely catch dynamically prefixed button payloads.
+
+## WhatsApp API Atomic Message Delivery (Image + Text)
+When building WhatsApp flows that require an image to appear immediately above a block of text and interactive buttons:
+- **NEVER** send the image as a standalone `type: "image"` message immediately followed by a `type: "interactive"` text message. Due to varying processing speeds on Meta's servers, the text will often overtake the image and arrive first, causing visual inversion on the device.
+- **ALWAYS** enforce atomic delivery by attaching the primary image directly into the `header` of the `interactive` message payload.
+- **Example:** `header: %{type: "image", image: %{link: image_url}}`
+- If multiple images must be sent (carousels), attach the primary image to the interactive header, and send the *extra* images as standalone messages with a slight delay (`Process.sleep(200)`) just beforehand.
