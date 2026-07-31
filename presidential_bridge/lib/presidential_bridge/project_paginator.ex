@@ -17,8 +17,8 @@ defmodule PresidentialBridge.ProjectPaginator do
 
     # Concurrently fetch serper & og images per project
     projects_with_images = Task.async_stream(projects, fn item ->
-      headline = item["title"] || item["name"] || "Project"
-      clean_headline = String.slice(headline, 0, 40)
+      headline = item["headline"] || item["title"] || item["name"] || "Project"
+      clean_headline = smart_truncate(headline, 65)
       link = item["link"] || ""
       serper = fetch_serper_images(clean_headline, location)
       og = scrape_og_image(link)
@@ -28,13 +28,13 @@ defmodule PresidentialBridge.ProjectPaginator do
     |> Enum.reject(&is_nil/1)
 
     parsed_projects = Enum.reduce(projects_with_images, {[], images_pool}, fn {item, serper, og}, {projects_acc, current_pool} ->
-      headline = item["title"] || item["name"] || "Project"
+      headline = item["headline"] || item["title"] || item["name"] || "Project"
       subtitle = item["subtitle"] || ""
       detail = item["detail"] || ""
 
-      # Apply strict truncation to avoid overlay clipping
-      clean_headline = String.slice(headline, 0, 40)
-      clean_subtitle = String.slice(subtitle, 0, 60)
+      # Apply strict truncation to avoid overlay clipping without breaking words
+      clean_headline = smart_truncate(headline, 65)
+      clean_subtitle = smart_truncate(subtitle, 60)
 
       # Build image list up to 3
       images = (serper ++ List.wrap(og)) |> Enum.uniq() |> Enum.reject(&is_nil/1) |> Enum.reject(&(&1 == ""))
@@ -48,7 +48,7 @@ defmodule PresidentialBridge.ProjectPaginator do
         "short_subtitle" => clean_subtitle,
         "detail" => detail,
         "image_urls" => final_images,
-        "date" => item["date"] || (Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y")),
+        "date" => item["date"] || (Date.utc_today() |> Calendar.strftime("%a, %d %b %Y")),
         "button_payload" => "project_read_more_#{length(projects_acc)}"
       }
 
@@ -62,7 +62,7 @@ defmodule PresidentialBridge.ProjectPaginator do
       "projects" => parsed_projects
     }
     
-    Redix.command(:redix, ["SET", "projects_queue:#{phone}", Jason.encode!(queue_data), "EX", "3600"])
+    Redix.command(:redix, ["SET", "projects_queue_v130:#{phone}", Jason.encode!(queue_data), "EX", "3600"])
     Redix.command(:redix, ["SET", "projects_index:#{phone}", "0", "EX", "3600"])
     
     length(parsed_projects)
@@ -127,5 +127,27 @@ defmodule PresidentialBridge.ProjectPaginator do
       _ -> nil
     end
   end
+
   defp scrape_og_image(_), do: nil
+
+  defp smart_truncate(text, max_len) do
+    if String.length(text) <= max_len do
+      clean_trailing_dangling(text)
+    else
+      # Take up to max_len, then find the last space to avoid cutting a word in half
+      sliced = String.slice(text, 0, max_len)
+      truncated = case Regex.run(~r/^(.*)\s\S*$/, sliced) do
+        [_, up_to_last_space] -> up_to_last_space
+        _ -> sliced # Fallback if no space found
+      end
+      clean_trailing_dangling(truncated)
+    end
+  end
+
+  defp clean_trailing_dangling(text) do
+    text
+    |> String.replace(~r/\s+(about|to|for|with|on|at|by|from|in|of|into|and|or|but|as|that|a|an|the)\s*$/i, "")
+    |> String.replace(~r/\s*(\,|\;)\s*$/, "")
+    |> String.trim()
+  end
 end

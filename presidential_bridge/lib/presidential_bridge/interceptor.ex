@@ -24,11 +24,12 @@ defmodule PresidentialBridge.Interceptor do
         if is_list(image_urls) do
           Enum.each(image_urls, fn img ->
             if img && img != "" do
+              overlay_url = PresidentialBridge.ImageOverlay.generate(img, "Presidential Update", body_text)
               Meta.send_message(%{
                 messaging_product: "whatsapp",
                 to: phone,
                 type: "image",
-                image: %{link: img}
+                image: %{link: overlay_url}
               })
               Process.sleep(500) # Ensure WhatsApp sequences them in the correct display order
             end

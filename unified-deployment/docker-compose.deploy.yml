@@ -118,6 +118,7 @@ services:
       - ./nginx/html/planna-favicon.ico:/usr/share/nginx/html/planna-favicon.ico:ro
       - ./nginx/html/planna-apple-touch-icon.png:/usr/share/nginx/html/planna-apple-touch-icon.png:ro
       - ./nginx/html/planna-theme.css:/usr/share/nginx/html/planna-theme.css:ro
+      - ./nginx/html/planna-spinner.js:/usr/share/nginx/html/planna-spinner.js:ro
       - ./nginx/html/avatars:/usr/share/nginx/html/avatars:ro
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot

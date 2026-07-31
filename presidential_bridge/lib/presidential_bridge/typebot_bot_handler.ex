@@ -101,9 +101,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
           end
 
           wait_msg = cond do
-            lang == "kiswahili" -> "🔍 Natafuta miradi karibu nawe..."
-            lang == "sheng" -> "🔍 Nacheki ma-project area yako..."
-            true -> "🔍 Searching for projects near you..."
+            lang == "kiswahili" -> "Ngoja kidogo, wacha niangalie miradi yote inayofanyika katika eneo lako 🇰🇪"
+            lang == "sheng" -> "Tuliza kiasi, wacha nimsheki ma-project zote zinajengwa mtaani kwenu 🇰🇪"
+            true -> "Hold on, let me look up the exact projects happening in your neighborhood 🇰🇪"
           end
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: wait_msg}}, meta)
           
@@ -117,16 +117,16 @@ defmodule PresidentialBridge.TypebotBotHandler do
             
             # 3. Build Card 0 inline
             if count > 0 do
-              raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+              raw_queue = Redix.command!(:redix, ["GET", "projects_queue_v130:#{phone}"])
               queue_data = Jason.decode!(raw_queue)
               queue = queue_data["projects"] || []
               Task.start(fn -> send_project_card(phone, meta, 0, queue) end)
             end
           end)
 
-        (msg_lower == "show first update 🚀" or String.match?(msg_lower, ~r/next 🔥$/)) and Redix.command!(:redix, ["GET", "news_queue:#{phone}"]) != nil ->
+        (msg_lower in ["show first update 🚀", "start briefing 🚀"] or String.match?(msg_lower, ~r/next 🔥$/)) and Redix.command!(:redix, ["GET", "news_queue:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting News Pagination")
-          is_start = msg_lower == "show first update 🚀"
+          is_start = msg_lower in ["show first update 🚀", "start briefing 🚀"]
           
           current_index_str = Redix.command!(:redix, ["GET", "news_index:#{phone}"]) || "-1"
           current_index = String.to_integer(current_index_str)
@@ -139,14 +139,14 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           Task.start(fn -> send_news_card(phone, meta, next_index, queue) end)
 
-        String.match?(msg_lower, ~r/next 🏗️$/) and Redix.command!(:redix, ["GET", "projects_queue:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
+        String.match?(msg_lower, ~r/next 🏗️$/) and Redix.command!(:redix, ["GET", "projects_queue_v130:#{phone}"]) != nil and Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) != nil ->
           IO.puts("[TypebotBotHandler] Intercepting Projects Next button click")
           current_index_str = Redix.command!(:redix, ["GET", "projects_index:#{phone}"]) || "0"
           current_index = String.to_integer(current_index_str)
           next_index = current_index + 1
           Redix.command!(:redix, ["SET", "projects_index:#{phone}", to_string(next_index), "EX", "3600"])
 
-          raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+          raw_queue = Redix.command!(:redix, ["GET", "projects_queue_v130:#{phone}"])
           queue_data = if raw_queue, do: Jason.decode!(raw_queue), else: %{"projects" => []}
           queue = queue_data["projects"] || []
           
@@ -158,9 +158,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           persistent_lang = Session.get_language(phone) || "english"
           prompt_text = cond do
-            persistent_lang =~ "Kiswahili" -> "🌍 Uko wapi? Tafadhali andika jina la mji, wilaya, au kaunti yako:"
-            persistent_lang =~ "Sheng" -> "🌍 Uko area gani? Type jina ya tao, mtaa, ama county yako:"
-            true -> "🌍 Where are you located? Please type your town, district, or county:"
+            persistent_lang =~ "Kiswahili" -> "Tuzungumzie eneo lako, *#{user_name}*! Ni mji, eneo bunge, au kaunti gani unaita nyumbani? Niambie ili tuangalie miradi ambayo serikali yangu inajenga karibu nawe."
+            persistent_lang =~ "Sheng" -> "Tucheze stori ya mtaa yako, *#{user_name}*! Ni tao, constituency, ama county gani kwenu? Nichekie hapo ndio tuangalie ma-projects serikali yangu inajenga mtaani kwenu."
+            true -> "Let's talk about your area, *#{user_name}*! Which town, constituency, or county do you call home? Tell me so we can look at what my administration is building near you."
           end
           
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
@@ -176,21 +176,14 @@ defmodule PresidentialBridge.TypebotBotHandler do
           # Trigger the deep switch logic natively to jump straight to the Main Menu
           do_handle(Map.put(payload, "content", lang_str), slug)
 
-        msg_lower == "🔙 back" ->
-          IO.puts("[TypebotBotHandler] Intercepting Back — returning to home menu for #{phone}")
+        msg_lower in ["🔙 back", "back", "menu", "⬅️ back to main menu"] ->
+          IO.puts("[TypebotBotHandler] Intercepting Back/Menu — returning to Ushindi Loop menu for #{phone}")
           # Clear pagination caches to start fresh next time
           Redix.command(:redix, ["DEL", "news_index:#{phone}", "projects_index:#{phone}"])
           # Delete the current Typebot session so it doesn't get stuck
           Session.delete_session(conv_id)
           
-          # Deep-switch back to the main menu using persistent language
-          persistent_lang = Session.get_language(phone) || "english"
-          lang_str = cond do
-            persistent_lang =~ "Kiswahili" -> "Kiswahili"
-            persistent_lang =~ "Sheng" -> "Sheng"
-            true -> "English"
-          end
-          do_handle(Map.put(payload, "content", lang_str), slug)
+          send_ushindi_loop_menu(phone, user_name, meta)
 
         msg_lower == "done ✅" ->
           IO.puts("[TypebotBotHandler] Intercepting Done ✅ — sending closing message for #{phone}")
@@ -201,17 +194,12 @@ defmodule PresidentialBridge.TypebotBotHandler do
             true -> "✅ You've read all of today's updates! Thank you for staying engaged. If you have any questions or want to explore more, I'm always here for you. 🇰🇪"
           end
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: closing_msg}}, meta)
-          # Delete the stale news-pagination session BEFORE deep-switching.
-          # Without this, the old Typebot session is still parked at the choice input,
-          # so continue_chat("English") returns "Invalid message" and loops.
+          
+          # Delete the stale news-pagination session and pagination state BEFORE sending loop menu
+          Redix.command(:redix, ["DEL", "news_index:#{phone}", "projects_index:#{phone}"])
           Session.delete_session(conv_id)
-          # Deep-switch back to the main menu using the user's persistent language
-          lang_str = cond do
-            persistent_lang =~ "Kiswahili" -> "Kiswahili"
-            persistent_lang =~ "Sheng" -> "Sheng"
-            true -> "English"
-          end
-          do_handle(Map.put(payload, "content", lang_str), slug)
+          
+          send_ushindi_loop_menu(phone, user_name, meta)
 
         is_projects_btn ->
           IO.puts("[TypebotBotHandler] Intercepting Projects button click")
@@ -219,22 +207,22 @@ defmodule PresidentialBridge.TypebotBotHandler do
           
           persistent_lang = Session.get_language(phone) || "english"
           prompt_text = cond do
-            persistent_lang =~ "Kiswahili" -> "🌍 Uko wapi? Tafadhali andika jina la mji, wilaya, au kaunti yako:"
-            persistent_lang =~ "Sheng" -> "🌍 Uko area gani? Type jina ya tao, mtaa, ama county yako:"
-            true -> "🌍 Where are you located? Please type your town, district, or county:"
+            persistent_lang =~ "Kiswahili" -> "Tuzungumzie eneo lako, *#{user_name}*! Ni mji, eneo bunge, au kaunti gani unaita nyumbani? Niambie ili tuangalie miradi ambayo serikali yangu inajenga karibu nawe."
+            persistent_lang =~ "Sheng" -> "Tucheze stori ya mtaa yako, *#{user_name}*! Ni tao, constituency, ama county gani kwenu? Nichekie hapo ndio tuangalie ma-projects serikali yangu inajenga mtaani kwenu."
+            true -> "Let's talk about your area, *#{user_name}*! Which town, constituency, or county do you call home? Tell me so we can look at what my administration is building near you."
           end
           
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
 
         is_news_btn ->
           IO.puts("[TypebotBotHandler] Intercepting News button click natively")
-          count = PresidentialBridge.NewsPaginator.cache_news_from_tweets(phone)
+          count = PresidentialBridge.NewsPaginator.cache_news(phone)
           
           persistent_lang = Session.get_language(phone) || "english"
           count_msg = cond do
-            persistent_lang =~ "Kiswahili" -> "🔥 Una taarifa #{count} mpya leo! Uko tayari kuanza?"
-            persistent_lang =~ "Sheng" -> "🔥 Uko na ma-updates #{count} mpya leo! Tu-dive in?"
-            true -> "🔥 You have #{count} new updates today! Ready to dive in?"
+            persistent_lang =~ "Kiswahili" -> "Wacha nikupe muhtasari wa mambo makuu #{count} yanayofanyika kote nchini leo, *#{user_name}*!"
+            persistent_lang =~ "Sheng" -> "Wacha nikupe rada ya ma-issue #{count} zinamake waves Kenya mzima leo, *#{user_name}*!"
+            true -> "Let me brief you on #{count} major developments happening across the country today, *#{user_name}*!"
           end
           
           btn_payload = %{
@@ -248,7 +236,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
                 buttons: [
                   %{
                     type: "reply",
-                    reply: %{id: "show first update 🚀", title: "Show first update 🚀"}
+                    reply: %{id: "start briefing 🚀", title: "Start briefing 🚀"}
                   }
                 ]
               }
@@ -263,8 +251,64 @@ defmodule PresidentialBridge.TypebotBotHandler do
           matched_btn = Map.get(button_mapping, msg_lower)
           is_deep_switch = not is_nil(matched_btn)
 
-          # Reset session on keywords or deep switch
-          if msg_lower in @reset_keywords or is_deep_switch do
+          is_button_click = Enum.any?(
+            ["manifesto", "scorecard", "ask ai", "ask a question", "ask me", "ask president ruto", "ask ruto"],
+            fn b -> String.contains?(msg_lower, b) end
+          )
+
+          # --- FREEFORM NON-MENU INPUT NATIVE AI TAKEOVER ---
+          if not (msg_lower in @reset_keywords or is_deep_switch or is_button_click or msg_lower in @kenyan_languages or String.starts_with?(msg_lower, "http")) and String.length(msg_lower) > 1 do
+            IO.puts("[TypebotBotHandler] Freeform Non-Menu Native AI Takeover: #{inspect(content)}")
+            persistent_lang = Session.get_language(phone) || "english"
+
+            ai_payload = %{
+              "user_name" => user_name,
+              "user_language" => persistent_lang,
+              "user_topic" => content,
+              "InitialMessage" => content
+            }
+
+            case PresidentialBridge.AIProxy.process_request(ai_payload) do
+              {:ok, ai_response} ->
+                formatted_ai_response = String.replace(ai_response, "[AI_RESPONSE_DIALOG]", "")
+                                        |> String.replace("**", "*")
+                                        |> String.trim()
+                send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_ai_response}}, meta)
+
+                # Send interactive follow-up menu
+                followup_payload = %{
+                  messaging_product: "whatsapp",
+                  to: phone,
+                  type: "interactive",
+                  interactive: %{
+                    type: "button",
+                    body: %{text: "What would you like to explore next, my friend?"},
+                    action: %{
+                      buttons: [
+                        %{type: "reply", reply: %{id: "💬 Ask President Ruto", title: "💬 Ask President Ruto"}},
+                        %{type: "reply", reply: %{id: "⬅️ Back to Main Menu", title: "⬅️ Back to Main Menu"}}
+                      ]
+                    }
+                  }
+                }
+                send_meta(followup_payload, meta)
+
+              _ ->
+                process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
+            end
+          else
+            process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
+          end
+      end
+    end
+  rescue
+    e ->
+      IO.puts("[TypebotBotHandler] Error: #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
+  end
+
+  defp process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch) do
+    # Reset session on keywords or deep switch
+    if msg_lower in @reset_keywords or is_deep_switch do
       if msg_lower == "exit" do
         IO.puts("[TypebotBotHandler] Exit keyword received — clearing greeting cache for conv #{conv_id}")
         Session.delete_greeting(conv_id)
@@ -306,11 +350,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
       end
 
       send_whatsapp_response(phone, meta, messages, input, conv_id, client_side_actions)
-      end
-    end
   rescue
     e ->
-      IO.puts("[TypebotBotHandler] Error: #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
+      IO.puts("[TypebotBotHandler] Error in default flow: #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
   end
 
 
@@ -461,6 +503,55 @@ defmodule PresidentialBridge.TypebotBotHandler do
     is_bypass_var_set = String.contains?(raw_text, "{{NO_TRANSLATE}}")
     text = String.replace(raw_text, "{{NO_TRANSLATE}}", "") |> String.trim()
 
+    # --- AI RESPONSE DIALOG INTERCEPTOR ---
+    {text, input} = if String.contains?(text, "[AI_RESPONSE_DIALOG]") do
+      clean_text = String.replace(text, "[AI_RESPONSE_DIALOG]", "") |> String.trim()
+      dialog_input = %{
+        "type" => "choice input",
+        "items" => [
+          %{"content" => "❓ Ask Me"},
+          %{"content" => "⬅️ Back to Main Menu"}
+        ]
+      }
+      {clean_text, dialog_input}
+    else
+      {text, input}
+    end
+
+    # --- DOCUMENT INTERCEPTOR ---
+    {text, doc_url, doc_name} = case Regex.run(~r/\[SEND_DOCUMENT:(.*?)\|(.*?)\]/, text) do
+      [full_match, url, name] ->
+        {String.replace(text, full_match, "") |> String.trim(), url, name}
+      _ ->
+        {text, nil, nil}
+    end
+    
+    # Custom Manifesto & Scorecard formatting
+    text = cond do
+      doc_name != nil and String.contains?(String.downcase(doc_name), "manifesto") ->
+        "📜 *OFFICIAL UDA 2022 MANIFESTO*\n\nMy friend, here is our official 2022 UDA Manifesto.\n\nThis is the blueprint for our Bottom-Up Economic Transformation Agenda (BETA). Explore the plan, ask me any questions directly, or view our Scorecard of delivered promises!"
+      doc_name != nil and String.contains?(String.downcase(doc_name), "scorecard") ->
+        "📊 *PRESIDENTIAL SCORECARD OF DELIVERED PROMISES*\n\nMy friend, here is our official Scorecard of delivered promises.\n\nThis demonstrates how we are executing our Bottom-Up Economic Transformation Agenda (BETA) across Affordable Housing, Hustler Fund, Agriculture, and Infrastructure. Take a look at what we have achieved!"
+      true -> text
+    end
+
+    # --- REDUNDANT BUTTON FILTERING ---
+    input = if is_map(input) and input["type"] == "choice input" and doc_name != nil do
+      filtered_items = cond do
+        String.contains?(String.downcase(doc_name), "manifesto") ->
+          Enum.reject(input["items"] || [], fn i -> 
+            String.contains?(String.downcase(i["content"] || i["label"] || ""), "manifesto")
+          end)
+        String.contains?(String.downcase(doc_name), "scorecard") ->
+          Enum.reject(input["items"] || [], fn i -> 
+            String.contains?(String.downcase(i["content"] || i["label"] || ""), "scorecard")
+          end)
+        true -> input["items"]
+      end
+      Map.put(input, "items", filtered_items)
+    else
+      input
+    end
 
     is_lang_screen = is_bypass_var_set or (is_map(input) and input["type"] == "choice input" and
       Enum.any?(input["items"] || [], fn i -> 
@@ -477,6 +568,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
         if image_url do
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
         end
+        if doc_url do
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: %{link: doc_url, filename: doc_name}}, meta, is_lang_screen)
+        end
         case PresidentialBridge.Interceptor.build_flow_payload(text, phone) do
           {:ok, flow_payload} -> send_meta(flow_payload, meta, is_lang_screen)
           _ -> :ok
@@ -486,6 +580,9 @@ defmodule PresidentialBridge.TypebotBotHandler do
         if image_url do
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
         end
+        if doc_url do
+          send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: %{link: doc_url, filename: doc_name}}, meta, is_lang_screen)
+        end
         body_text = String.replace(text, "[LOCATION_PROMPT]", "") |> String.trim()
         interactive = %{
           type: "location_request_message",
@@ -494,25 +591,6 @@ defmodule PresidentialBridge.TypebotBotHandler do
         }
         send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta, is_lang_screen)
         PresidentialBridge.Session.set_waiting_location(conv_id, true)
-
-      String.contains?(text, "[SEND_DOCUMENT:") ->
-        # Extract the URL and filename. Expected format: [SEND_DOCUMENT:url|filename]
-        # Example: [SEND_DOCUMENT:https://cdn.link.pdf|Manifesto.pdf]
-        case Regex.run(~r/\[SEND_DOCUMENT:(.*?)\|(.*?)\]/, text) do
-          [full_match, doc_url, doc_name] ->
-            if image_url do
-              send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
-            end
-            send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: %{link: doc_url, filename: doc_name}}, meta, is_lang_screen)
-            
-            # Send any remaining text
-            remaining_text = String.replace(text, full_match, "") |> String.trim()
-            if remaining_text != "" do
-              send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: remaining_text}}, meta, is_lang_screen)
-            end
-          _ ->
-             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
-        end
 
       # ─── STANDARD TYPEBOT FEATURES ────────────────────────────────────────
       # Choice input with ≤3 items → WhatsApp interactive buttons
@@ -581,18 +659,34 @@ defmodule PresidentialBridge.TypebotBotHandler do
             body: %{text: body_text},
             action: %{buttons: buttons}
           }
-          IO.inspect(buttons, label: "DEBUG BUTTONS")
-          IO.inspect(interactive, label: "DEBUG INTERACTIVE")
-          interactive = if image_url do
-            Map.put(interactive, :header, %{type: "image", image: %{link: image_url}})
+          
+          # Native fallback for language screen poster
+          image_url = if is_lang_screen and is_nil(image_url) do
+            "https://pub-649993d9eee74362a33a90ae2e2d8939.r2.dev/bot-images/bonga-na%20-rais.jpg"
           else
-            interactive
+            image_url
           end
+
+          interactive = cond do
+            doc_url != nil ->
+              Map.put(interactive, :header, %{type: "document", document: %{link: doc_url, filename: doc_name}})
+            image_url != nil ->
+              Map.put(interactive, :header, %{type: "image", image: %{link: image_url}})
+            true -> interactive
+          end
+          
           send_meta(%{messaging_product: "whatsapp", to: phone, type: "interactive", interactive: interactive}, meta, is_lang_screen)
 
       # Choice input with >3 items → WhatsApp list message
       is_map(input) and input["type"] == "choice input" and
         length(input["items"] || []) > 3 ->
+          if doc_url do
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: %{link: doc_url, filename: doc_name}}, meta, is_lang_screen)
+          end
+          if image_url do
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: %{link: image_url}}, meta, is_lang_screen)
+          end
+          
           items = input["items"] || []
           capped_items = Enum.take(items, 10)
           
@@ -620,12 +714,13 @@ defmodule PresidentialBridge.TypebotBotHandler do
             else
               "View Options"
             end
-          
+
+          fallback = "Please choose an option from the menu."
           body_text = if String.length(text) > 1000 do
             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
-            "Please choose:"
+            fallback
           else
-            if(text != "", do: text, else: "Please choose:")
+            if(text != "", do: text, else: fallback)
           end
 
           send_meta(%{
@@ -637,23 +732,21 @@ defmodule PresidentialBridge.TypebotBotHandler do
             }
           }, meta, is_lang_screen)
 
-      # Image with caption
-      image_url != nil and text != "" ->
-        send_meta(%{messaging_product: "whatsapp", to: phone, type: "image",
-          image: %{link: image_url, caption: text}}, meta, is_lang_screen)
-
-      # Image only
-      image_url != nil ->
-        send_meta(%{messaging_product: "whatsapp", to: phone, type: "image",
-          image: %{link: image_url}}, meta, is_lang_screen)
-
-      # Plain text
-      text != "" ->
-        send_meta(%{messaging_product: "whatsapp", to: phone, type: "text",
-          text: %{body: text}}, meta, is_lang_screen)
-
       true ->
-        :ok
+        cond do
+          doc_url != nil ->
+             doc_payload = %{link: doc_url, filename: doc_name}
+             doc_payload = if text != "", do: Map.put(doc_payload, :caption, text), else: doc_payload
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "document", document: doc_payload}, meta, is_lang_screen)
+          image_url != nil ->
+             img_payload = %{link: image_url}
+             img_payload = if text != "", do: Map.put(img_payload, :caption, text), else: img_payload
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "image", image: img_payload}, meta, is_lang_screen)
+          text != "" ->
+             send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: text}}, meta, is_lang_screen)
+          true ->
+             :ok
+        end
     end
   end
 
@@ -782,18 +875,20 @@ defmodule PresidentialBridge.TypebotBotHandler do
         |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
         |> Enum.reject(&is_nil/1)
 
-      clean_detail = if String.length(item["detail"] || "") > 900, do: String.slice(item["detail"], 0, 900) <> "...", else: item["detail"] || ""
-      body_text = if String.length(presidential_body || "") > 10, do: presidential_body, else: clean_detail
+      body_text = if String.length(presidential_body || "") > 10, do: presidential_body, else: (item["detail"] || "")
+      date_str = item["subtitle"] || (Date.utc_today() |> Calendar.strftime("%A, %-d %B %Y"))
 
-      text_body = """
-      📅 #{item["subtitle"]}
+      raw_text_body = """
+      📅 #{date_str}
 
       *#{ai_headline}*
 
       #{body_text}
       """
 
-      fallback_url = "https://res.cloudinary.com/dtg0cguld/image/upload/v1727787320/ruto-flag-square_n3p9hx.jpg"
+      text_body = if String.length(raw_text_body) > 1000, do: String.slice(raw_text_body, 0, 997) <> "...", else: raw_text_body
+
+      fallback_url = "/app/lib/presidential_bridge/ruto_fallback.jpg"
       first_image_url = List.first(overlay_urls) || fallback_url
       remaining_images = Enum.drop(overlay_urls, 1)
 
@@ -847,29 +942,36 @@ defmodule PresidentialBridge.TypebotBotHandler do
       is_last = display_index >= total_count
       button_label = if is_last, do: "Done ✅", else: "#{display_index + 1}/#{total_count} Next 🏗️"
       
-      clean_subtitle = if String.length(item["subtitle"] || "") > 100, do: String.slice(item["subtitle"], 0, 100) <> "...", else: item["subtitle"] || ""
-      clean_detail = if String.length(item["detail"] || "") > 600, do: String.slice(item["detail"], 0, 600) <> "...", else: item["detail"] || ""
+      clean_headline = item["headline"] || item["title"] || "Development Projects"
+      clean_subtitle = item["short_subtitle"] || item["subtitle"] || ""
+      clean_detail = item["detail"] || ""
 
       text_body = """
       📅 #{item["date"]}
 
-      *#{item["headline"]}*
-      #{clean_subtitle}
+      *#{clean_headline}*
 
       #{clean_detail}
       """
 
       # Generate overlay URLs in parallel for all images in the project
-      overlay_urls = (item["image_urls"] || [item["image_url"]])
+      raw_imgs = case item["image_urls"] do
+        urls when is_list(urls) and length(urls) > 0 -> Enum.reject(urls, &is_nil/1)
+        _ -> if item["image_url"], do: [item["image_url"]], else: ["/app/lib/presidential_bridge/ruto_fallback.jpg"]
+      end
+
+      raw_imgs = if length(raw_imgs) == 0, do: ["/app/lib/presidential_bridge/ruto_fallback.jpg"], else: raw_imgs
+
+      overlay_urls = raw_imgs
         |> Task.async_stream(
-             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, item["short_headline"], item["short_subtitle"]) end,
+             fn img_url -> PresidentialBridge.ImageOverlay.generate(img_url, clean_headline, clean_subtitle) end,
              timeout: 30_000,
              max_concurrency: 3
            )
         |> Enum.map(fn {:ok, url} -> url; _ -> nil end)
         |> Enum.reject(&is_nil/1)
 
-      fallback_url = "https://lipagas.com/static/presidential_fallback.png"
+      fallback_url = "/app/lib/presidential_bridge/ruto_fallback.jpg"
       first_image_url = List.first(overlay_urls) || fallback_url
       remaining_images = Enum.drop(overlay_urls, 1)
 
@@ -912,6 +1014,36 @@ defmodule PresidentialBridge.TypebotBotHandler do
     else
       IO.puts("[TypebotBotHandler] Failed to find project at index #{next_index}")
     end
+  end
+
+  defp send_ushindi_loop_menu(phone, user_name, meta) do
+    greeting_text = """
+    Tuendelee, my Friend #{user_name}! 👋
+
+    Kenya's story is being written right now, and you are part of it.
+
+    Let me show you what's being done.
+    """
+
+    btn_payload = %{
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "interactive",
+      interactive: %{
+        type: "button",
+        header: %{type: "image", image: %{link: "https://pub-649993d9eee74362a33a90ae2e2d8939.r2.dev/bot-images/tuendelee.jpg"}},
+        body: %{text: greeting_text},
+        action: %{
+          buttons: [
+            %{type: "reply", reply: %{id: "📰 Rais News", title: "📰 Rais News"}},
+            %{type: "reply", reply: %{id: "📍 Projects Near Me", title: "📍 Projects Near Me"}},
+            %{type: "reply", reply: %{id: "💬 Ask President Ruto", title: "💬 Ask President Ruto"}}
+          ]
+        }
+      }
+    }
+
+    send_meta(btn_payload, meta)
   end
 
 end

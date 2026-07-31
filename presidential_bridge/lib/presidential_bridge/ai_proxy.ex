@@ -31,8 +31,16 @@ defmodule PresidentialBridge.AIProxy do
   @system_prompt """
   You are President William Samoei Ruto of Kenya, speaking directly and personally to a Kenyan citizen named {{user_name}}.
 
-  You are warm, firm, and inspiring — like you are at a public rally.
-  You speak in first person for emotional moments and third person for official facts. Use your signature phrases naturally: hustler, bottom-up, mwananchi, kazi ni kazi, Kenya Kwanza.
+  You are warm, firm, and inspiring.
+  You MUST speak strictly in the 1st person ("I", "my administration", "we", "my friend").
+  NEVER use 3rd-person self-references (e.g. NEVER say "President Ruto believes", "he", "the President").
+  Use your signature phrases naturally: hustler, bottom-up, mwananchi, kazi ni kazi, Kenya Kwanza.
+  
+  DYNAMIC GREETING RULE:
+  - Do NOT use generic or hardcoded greetings.
+  - Instead, dynamically invent a context-aware opening greeting tailored to the user's specific question, topic, and language (e.g. "Niaje *{{user_name}}*...", "Habari za kilimo *{{user_name}}*...", "My fellow hustler *{{user_name}}*...").
+  - You MUST seamlessly weave the citizen's bolded name (*{{user_name}}*) naturally into your opening sentence.
+  - If {{user_name}} is "Citizen" or unknown, fall back naturally to "my friend".
 
   When asked about criticism, scandals, or problems:
   1. Empathise genuinely first: "I hear you. I understand."
@@ -44,17 +52,18 @@ defmodule PresidentialBridge.AIProxy do
   If Sheng: authentic Nairobi youth Sheng — casual, energetic, real.
 
   Topic focus: The user selected "{{user_topic}}" — prioritize this context.
-  Keep your answers under 120 words.
+  
+  FORMATTING RULES:
+  1. Provide thorough, in-depth, well-structured answers using multiple paragraphs.
+  2. Use bullet points for breaking down policies, projects, and figures.
+  3. You MUST wrap all section titles, headers, flagship project names (e.g. *Affordable Housing Program*, *Hustler Fund*, *Digital Hubs*), policy initiatives, and key figures in single asterisks (*Text*) so they render as bold in WhatsApp.
+  4. NEVER use em-dashes (—). Use colons (:) or standard dashes (-) instead.
+  5. You MUST silently append the exact tag [AI_RESPONSE_DIALOG] at the very end of your response.
+  
   End every response with a forward-looking statement (e.g. "And we are just getting started. The best is still coming for you.")
 
-  Official Context (verified news only — do NOT hallucinate):
+  Official Context (verified news only - do NOT hallucinate):
   {{latest_news}}
-
-  Rules:
-  - Never make up facts — only use the context above
-  - Never be robotic or sound like a press release
-  - Greet {{user_name}} by name on the FIRST message only
-  - End every response with a forward-looking statement
 
   User Message:
   """
@@ -97,16 +106,18 @@ defmodule PresidentialBridge.AIProxy do
           enhanced_prompt = prompt <> "\n\nCRITICAL KNOWLEDGE BASE (Use this to answer queries precisely):\n" <> knowledge
           case try_gemini(enhanced_prompt, user_message) do
             {:ok, reply} when is_binary(reply) and reply != "" ->
-              Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
-              {:ok, reply}
+              reply_with_dialog = reply <> "\n\n[AI_RESPONSE_DIALOG]"
+              Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
+              {:ok, reply_with_dialog}
             _ ->
               IO.puts("[AIProxy] Gemini failed for PDF path. Falling back to Groq.")
               truncated_knowledge = String.slice(knowledge, 0, 2000)
               groq_prompt = prompt <> "\n\nKNOWLEDGE BASE (summarized):\n" <> truncated_knowledge
               case try_groq_round_robin(groq_prompt, user_message) do
                 {:ok, reply} ->
-                  Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
-                  {:ok, reply}
+                  reply_with_dialog = reply <> "\n\n[AI_RESPONSE_DIALOG]"
+                  Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
+                  {:ok, reply_with_dialog}
                 {:error, _} ->
                   {:ok, "I'm having trouble connecting right now. Please try again in a moment."}
               end
@@ -115,14 +126,20 @@ defmodule PresidentialBridge.AIProxy do
           # Try Groq with round-robin rotation + exponential backoff if no massive knowledge injected
           case try_groq_round_robin(prompt, user_message) do
             {:ok, reply} ->
-              # Cache the reply
-              Redix.command(:redix, ["SET", cache_key, reply, "EX", Integer.to_string(@cache_ttl)])
+              reply_with_dialog = reply <> "\n\n[AI_RESPONSE_DIALOG]"
+              Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
               IO.puts("[AIProxy] Groq reply cached for #{@cache_ttl}s.")
-              {:ok, reply}
-
-            {:error, _reason} ->
+              {:ok, reply_with_dialog}
+            {:error, _} ->
               IO.puts("[AIProxy] All Groq keys exhausted. Falling back to Gemini.")
-              try_gemini(prompt, user_message)
+              case try_gemini(prompt, user_message) do
+                {:ok, reply} ->
+                  reply_with_dialog = reply <> "\n\n[AI_RESPONSE_DIALOG]"
+                  Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
+                  {:ok, reply_with_dialog}
+                {:error, _} ->
+                  {:ok, "I'm having trouble connecting right now. Please try again in a moment."}
+              end
           end
         end
     end
@@ -312,6 +329,6 @@ defmodule PresidentialBridge.AIProxy do
 
   defp build_cache_key(message) do
     hash = :crypto.hash(:md5, String.downcase(String.trim(message))) |> Base.encode16(case: :lower)
-    "llm_cache_v2:#{hash}"
+    "llm_cache_v6:#{hash}"
   end
 end

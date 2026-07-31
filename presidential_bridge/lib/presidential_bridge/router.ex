@@ -479,7 +479,7 @@ defmodule PresidentialBridge.Router do
     IO.inspect(query_params, label: "[cache_news] query_params")
     IO.inspect(phone, label: "[cache_news] extracted phone")
 
-    count = PresidentialBridge.NewsPaginator.cache_news_from_tweets(phone)
+    count = PresidentialBridge.NewsPaginator.cache_news(phone)
     IO.inspect(count, label: "[cache_news] count returned")
 
     conn
@@ -581,7 +581,7 @@ defmodule PresidentialBridge.Router do
     index_str = Map.get(params, "project_index") || Map.get(params, "index") || "0"
     index = if is_binary(index_str) and index_str != "", do: elem(Integer.parse(index_str), 0), else: 0
 
-    raw_queue = Redix.command!(:redix, ["GET", "projects_queue:#{phone}"])
+    raw_queue = Redix.command!(:redix, ["GET", "projects_queue_v130:#{phone}"])
     queue_data = if raw_queue, do: Jason.decode!(raw_queue), else: %{"intro" => "", "projects" => []}
     queue = queue_data["projects"] || []
 
