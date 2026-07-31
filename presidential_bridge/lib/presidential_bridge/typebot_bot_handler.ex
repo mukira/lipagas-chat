@@ -251,53 +251,66 @@ defmodule PresidentialBridge.TypebotBotHandler do
           matched_btn = Map.get(button_mapping, msg_lower)
           is_deep_switch = not is_nil(matched_btn)
 
-          is_button_click = Enum.any?(
-            ["manifesto", "scorecard", "ask ai", "ask a question", "ask me", "ask president ruto", "ask ruto"],
+          is_ask_ruto_click = Enum.any?(
+            ["ask president ruto", "ask ruto", "ask ai", "ask a question", "ask me"],
             fn b -> String.contains?(msg_lower, b) end
           )
 
-          # --- FREEFORM NON-MENU INPUT NATIVE AI TAKEOVER ---
-          if not (msg_lower in @reset_keywords or is_deep_switch or is_button_click or msg_lower in @kenyan_languages or String.starts_with?(msg_lower, "http")) and String.length(msg_lower) > 1 do
-            IO.puts("[TypebotBotHandler] Freeform Non-Menu Native AI Takeover: #{inspect(content)}")
-            persistent_lang = Session.get_language(phone) || "english"
+          is_button_click = Enum.any?(
+            ["manifesto", "scorecard"],
+            fn b -> String.contains?(msg_lower, b) end
+          )
 
-            ai_payload = %{
-              "user_name" => user_name,
-              "user_language" => persistent_lang,
-              "user_topic" => content,
-              "InitialMessage" => content
-            }
+          cond do
+            # --- NATIVE INTERCEPTION FOR ASK PRESIDENT RUTO BUTTON ---
+            is_ask_ruto_click ->
+              IO.puts("[TypebotBotHandler] Native Interception: Ask President Ruto button clicked by #{phone}")
+              prompt_text = "Go ahead, my friend! Type your question below and I will answer you directly. 🇰🇪"
+              send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
 
-            case PresidentialBridge.AIProxy.process_request(ai_payload) do
-              {:ok, ai_response} ->
-                formatted_ai_response = String.replace(ai_response, "[AI_RESPONSE_DIALOG]", "")
-                                        |> String.replace("**", "*")
-                                        |> String.trim()
-                send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_ai_response}}, meta)
+            # --- FREEFORM NON-MENU INPUT NATIVE AI TAKEOVER ---
+            not (msg_lower in @reset_keywords or is_deep_switch or is_button_click or msg_lower in @kenyan_languages or String.starts_with?(msg_lower, "http")) and String.length(msg_lower) > 1 ->
+              IO.puts("[TypebotBotHandler] Freeform Non-Menu Native AI Takeover: #{inspect(content)}")
+              persistent_lang = Session.get_language(phone) || "english"
 
-                # Send interactive follow-up menu
-                followup_payload = %{
-                  messaging_product: "whatsapp",
-                  to: phone,
-                  type: "interactive",
-                  interactive: %{
-                    type: "button",
-                    body: %{text: "What would you like to explore next, my friend?"},
-                    action: %{
-                      buttons: [
-                        %{type: "reply", reply: %{id: "💬 Ask President Ruto", title: "💬 Ask President Ruto"}},
-                        %{type: "reply", reply: %{id: "⬅️ Back to Main Menu", title: "⬅️ Back to Main Menu"}}
-                      ]
+              ai_payload = %{
+                "user_name" => user_name,
+                "user_language" => persistent_lang,
+                "user_topic" => content,
+                "InitialMessage" => content
+              }
+
+              case PresidentialBridge.AIProxy.process_request(ai_payload) do
+                {:ok, ai_response} ->
+                  formatted_ai_response = String.replace(ai_response, "[AI_RESPONSE_DIALOG]", "")
+                                          |> String.replace("**", "*")
+                                          |> String.trim()
+                  send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: formatted_ai_response}}, meta)
+
+                  # Send interactive follow-up menu
+                  followup_payload = %{
+                    messaging_product: "whatsapp",
+                    to: phone,
+                    type: "interactive",
+                    interactive: %{
+                      type: "button",
+                      body: %{text: "What would you like to explore next, my friend?"},
+                      action: %{
+                        buttons: [
+                          %{type: "reply", reply: %{id: "💬 Ask President Ruto", title: "💬 Ask President Ruto"}},
+                          %{type: "reply", reply: %{id: "⬅️ Back to Main Menu", title: "⬅️ Back to Main Menu"}}
+                        ]
+                      }
                     }
                   }
-                }
-                send_meta(followup_payload, meta)
+                  send_meta(followup_payload, meta)
 
-              _ ->
-                process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
-            end
-          else
-            process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
+                _ ->
+                  process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
+              end
+
+            true ->
+              process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
           end
       end
     end
