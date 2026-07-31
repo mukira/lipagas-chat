@@ -251,8 +251,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
           matched_btn = Map.get(button_mapping, msg_lower)
           is_deep_switch = not is_nil(matched_btn)
 
-          is_ask_ruto_click = Enum.any?(
-            ["ask president ruto", "ask ruto", "ask ai", "ask a question", "ask me"],
+          is_ask_me_click = Enum.any?(
+            ["ask me", "❓ ask me", "ask ai", "ask a question"],
             fn b -> String.contains?(msg_lower, b) end
           )
 
@@ -262,10 +262,10 @@ defmodule PresidentialBridge.TypebotBotHandler do
           )
 
           cond do
-            # --- NATIVE INTERCEPTION FOR ASK PRESIDENT RUTO BUTTON ---
-            is_ask_ruto_click ->
-              IO.puts("[TypebotBotHandler] Native Interception: Ask President Ruto button clicked by #{phone}")
-              prompt_text = "Go ahead, my friend! Type your question below and I will answer you directly. 🇰🇪"
+            # --- NATIVE INTERCEPTION FOR ASK ME BUTTON -> DELIVER QUESTION PROMPT ---
+            is_ask_me_click ->
+              IO.puts("[TypebotBotHandler] Native Interception: Ask Me -> Delivering Question Prompt")
+              prompt_text = "Let's talk, my friend! What question do you have for me today? Type it right here. 🇰🇪"
               send_meta(%{messaging_product: "whatsapp", to: phone, type: "text", text: %{body: prompt_text}}, meta)
 
             # --- FREEFORM NON-MENU INPUT NATIVE AI TAKEOVER ---
@@ -297,7 +297,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
                       body: %{text: "What would you like to explore next, my friend?"},
                       action: %{
                         buttons: [
-                          %{type: "reply", reply: %{id: "💬 Ask President Ruto", title: "💬 Ask President Ruto"}},
+                          %{type: "reply", reply: %{id: "❓ Ask Me", title: "❓ Ask Me"}},
                           %{type: "reply", reply: %{id: "⬅️ Back to Main Menu", title: "⬅️ Back to Main Menu"}}
                         ]
                       }
@@ -657,7 +657,14 @@ defmodule PresidentialBridge.TypebotBotHandler do
           # We simply replace double asterisks with single asterisks.
           formatted_text = String.replace(text, "**", "*")
 
-          fallback = if Enum.any?(buttons_list, &String.contains?(&1, "⬅️")), do: "What would you like to do next?", else: "Please choose:"
+          fallback = cond do
+            Enum.any?(buttons_list, &String.contains?(&1, "Manifesto")) or Enum.any?(buttons_list, &String.contains?(&1, "Scorecard")) ->
+              "What would you like to explore? You can ask me anything directly, read the official Manifesto, or view our current Scorecard of delivered promises."
+            Enum.any?(buttons_list, &String.contains?(&1, "⬅️")) ->
+              "What would you like to explore next, my friend?"
+            true ->
+              "Please choose:"
+          end
 
           # WhatsApp interactive body text limit is 1024. If it's too big, fallback.
           body_text = if String.length(formatted_text) > 1000 do
