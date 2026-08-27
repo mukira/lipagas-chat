@@ -88,7 +88,24 @@ defmodule PresidentialBridge.TypebotBotHandler do
         "habari mpya"
       ]
 
+      is_otp_verify = String.match?(msg_lower, ~r/^(verify\s+)?\d{4,8}$/i) or
+                      String.match?(msg_lower, ~r/^verify\b/i) or
+                      String.match?(msg_lower, ~r/^\d{4,8}$/)
+
       cond do
+        is_otp_verify ->
+          IO.puts("[TypebotBotHandler] Intercepting OTP/Verification message for auth.hisia.app: #{content}")
+          Task.start(fn ->
+            url = "https://auth.hisia.app/whatsapp/webhook"
+            headers = [{"content-type", "application/json"}]
+            case PresidentialBridge.HTTP.post_json(url, payload, headers) do
+              {:ok, resp} ->
+                IO.puts("[TypebotBotHandler] Forwarded OTP to auth.hisia.app successfully (status #{resp.status})")
+              {:error, err} ->
+                IO.puts("[TypebotBotHandler] Error forwarding OTP to auth.hisia.app: #{inspect(err)}")
+            end
+          end)
+
         awaiting and msg_lower not in @reset_keywords ->
           IO.puts("[TypebotBotHandler] Intercepting location: #{content}")
           Redix.command!(:redix, ["DEL", "awaiting_location:#{phone}"])
