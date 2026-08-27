@@ -9,8 +9,9 @@ defmodule LipagasBridge.LipagasHandler do
   @reset_keywords ~w(reset hi hello start menu)
 
   def handle(event) when is_map(event) do
-    # Only process incoming user messages
-    if event["event"] != "message_created" or event["message_type"] != "incoming" do
+    inbox_id = get_in(event, ["inbox", "id"])
+    # Only process incoming user messages for LipaGas inbox (inbox 7)
+    if event["event"] != "message_created" or event["message_type"] != "incoming" or (inbox_id != nil and inbox_id != 7) do
       :skip
     else
       conv_id        = get_in(event, ["conversation", "id"])
