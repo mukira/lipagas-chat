@@ -30,7 +30,7 @@ services:
       retries: 5
 
   chatwoot:
-    image: chatwoot/chatwoot:latest
+    image: chatwoot/chatwoot:v4.17.0
     restart: always
     env_file: .env
     depends_on:
@@ -43,7 +43,7 @@ services:
     command: ['sh', '-c', 'rm -f /app/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0']
 
   sidekiq:
-    image: chatwoot/chatwoot:latest
+    image: chatwoot/chatwoot:v4.17.0
     restart: always
     env_file: .env
     depends_on:
