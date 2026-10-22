@@ -1,0 +1,143 @@
+version: '3'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    volumes:
+      - lipagas-postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    restart: always
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
+    environment:
+      - REDIS_PASSWORD=redis_password
+    volumes:
+      - lipagas-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chatwoot:
+    image: chatwoot/chatwoot:v4.17.0
+    restart: always
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./nginx/conf.d/branding/influence/logo_dark.svg:/app/public/brand-assets/logo_dark.svg:ro
+      - ./nginx/conf.d/branding/influence/logo_dark.svg:/app/public/brand-assets/logo.svg:ro
+      - ./nginx/conf.d/branding/influence/favicon.svg:/app/public/brand-assets/logo_thumbnail.svg:ro
+      - ./nginx/conf.d/branding/influence/favicon.ico:/app/public/favicon.ico:ro
+    command: ['sh', '-c', 'rm -f /app/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0']
+
+  sidekiq:
+    image: chatwoot/chatwoot:v4.17.0
+    restart: always
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+
+  typebot-builder:
+    image: baptistearno/typebot-builder:latest
+    restart: always
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8082:3000"
+
+  typebot-viewer:
+    image: baptistearno/typebot-viewer:latest
+    restart: always
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8083:3000"
+
+  lipagas-bridge:
+    build: ../lipagas_bridge
+    restart: always
+    env_file: .env
+    environment:
+      - PORT=4000
+    depends_on:
+      - redis
+    ports:
+      - "4010:4000"
+
+  joywo-bridge:
+    build: ../joywo_bridge
+    restart: always
+    env_file: .env
+    environment:
+      - PORT=4001
+    depends_on:
+      - redis
+    ports:
+      - "4011:4001"
+
+  presidential-bridge:
+    build: ../presidential_bridge
+    restart: always
+    env_file: .env
+    environment:
+      - CHATWOOT_BOT_TOKEN=zXDW1wqKjXqH2uZmR7rZSDi5
+      - PORT=4002
+    volumes:
+      - ../presidential_bridge/lib:/app/lib
+    depends_on:
+      - redis
+    ports:
+      - "4012:4002"
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "8088:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/local.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/html/planna-logo.webp:/usr/share/nginx/html/planna-logo.webp:ro
+      - ./nginx/html/planna-logo-icon.webp:/usr/share/nginx/html/planna-logo-icon.webp:ro
+      - ./nginx/html/planna-favicon.ico:/usr/share/nginx/html/planna-favicon.ico:ro
+      - ./nginx/html/planna-apple-touch-icon.png:/usr/share/nginx/html/planna-apple-touch-icon.png:ro
+      - ./nginx/html/planna-theme.css:/usr/share/nginx/html/planna-theme.css:ro
+      - ./nginx/html/planna-spinner.js:/usr/share/nginx/html/planna-spinner.js:ro
+      - ./nginx/html/avatars:/usr/share/nginx/html/avatars:ro
+    depends_on:
+      - chatwoot
+      - typebot-builder
+      - typebot-viewer
+      - lipagas-bridge
+      - joywo-bridge
+      - presidential-bridge
+
+volumes:
+  lipagas-postgres-data:
+  lipagas-redis-data:
