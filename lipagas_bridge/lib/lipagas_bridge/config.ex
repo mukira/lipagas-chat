@@ -20,8 +20,9 @@ defmodule LipagasBridge.Config do
   def chatwoot_account_id, do: System.get_env("CHATWOOT_ACCOUNT_ID") || "1"
 
   # ─── Typebot ──────────────────────────────────────────────────────────
-  def typebot_base_url,     do: "https://flow.lipagas.co/api/v1/typebots"
-  def typebot_continue_url, do: "https://flow.lipagas.co/api/v1/sessions"
+  def typebot_viewer_url,   do: System.get_env("TYPEBOT_VIEWER_URL") || "http://typebot-viewer:3000"
+  def typebot_base_url,     do: "#{typebot_viewer_url()}/api/v1/typebots"
+  def typebot_continue_url, do: "#{typebot_viewer_url()}/api/v1/sessions"
   def typebot_default_slug, do: "lipa-gas-whats-app-bot-o9nfrww"
 
   # ─── M-Pesa / Daraja ─────────────────────────────────────────────────

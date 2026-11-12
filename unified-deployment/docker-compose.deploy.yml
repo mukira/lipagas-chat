@@ -1,9 +1,19 @@
-version: '3'
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
     restart: always
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=64MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=32MB"
+      - "-c"
+      - "effective_cache_size=128MB"
+      - "-c"
+      - "max_connections=40"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -18,13 +28,13 @@ services:
   redis:
     image: redis:alpine
     restart: always
-    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
+    command: ["sh", "-c", "redis-server --requirepass \"$$REDIS_PASSWORD\" --maxmemory 64mb --maxmemory-policy allkeys-lru --save 60 1"]
     environment:
       - REDIS_PASSWORD=redis_password
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,16 +44,28 @@ services:
     restart: always
     env_file: .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
+      - REDIS_URL=redis://:redis_password@redis:6379
+      - REDIS_PASSWORD=redis_password
+      - MALLOC_ARENA_MAX=2
+      - EMBED_SIDEKIQ=true
+      - SIDEKIQ_CONCURRENCY=2
+      - WEB_CONCURRENCY=0
+      - RAILS_MAX_THREADS=3
+    volumes:
+      - ./99_embedded_sidekiq.rb:/app/config/initializers/99_embedded_sidekiq.rb:ro
     ports:
       - "3000:3000"
     command: ['sh', '-c', 'rm -f /app/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0']
 
   sidekiq:
     image: chatwoot/chatwoot:v4.17.0
+    profiles: ["extras"]
     restart: always
     env_file: .env
     depends_on:
@@ -51,12 +73,20 @@ services:
       - redis
     environment:
       - DATABASE_URL=postgres://postgres:postgres_password@postgres:5432/chatwoot_production
+      - REDIS_URL=redis://:redis_password@redis:6379
+      - REDIS_PASSWORD=redis_password
+      - MALLOC_ARENA_MAX=2
+      - SIDEKIQ_CONCURRENCY=2
     command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
 
   typebot-builder:
     image: baptistearno/typebot-builder:latest
+    profiles: ["extras"]
     restart: always
     env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/typebot
+      - NODE_OPTIONS=--max-old-space-size=256 --no-node-snapshot
     depends_on:
       - postgres
       - redis
@@ -67,9 +97,14 @@ services:
     image: baptistearno/typebot-viewer:latest
     restart: always
     env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/typebot
+      - NODE_OPTIONS=--max-old-space-size=256 --no-node-snapshot
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8083:3000"
 
@@ -77,15 +112,24 @@ services:
     build: ../lipagas_bridge
     restart: always
     env_file: .env
+    environment:
+      - REDIS_URL=redis://:redis_password@redis:6379
+      - CHATWOOT_URL=http://chatwoot:3000
+      - TYPEBOT_VIEWER_URL=http://typebot-viewer:3000
+      - ERL_FLAGS=+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     ports:
       - "4000:4000"
 
   joywo-bridge:
     build: ../joywo_bridge
+    profiles: ["extras"]
     restart: always
     env_file: .env
+    environment:
+      - REDIS_URL=redis://:redis_password@redis:6379
     depends_on:
       - redis
     ports:
@@ -93,10 +137,12 @@ services:
 
   presidential-bridge:
     build: ../presidential_bridge
+    profiles: ["extras"]
     restart: always
     env_file: .env
     environment:
       - CHATWOOT_BOT_TOKEN=zXDW1wqKjXqH2uZmR7rZSDi5
+      - REDIS_URL=redis://:redis_password@redis:6379
     volumes:
       - ../presidential_bridge/lib:/app/lib
     depends_on:
@@ -124,11 +170,17 @@ services:
       - ./certbot/www:/var/www/certbot
     depends_on:
       - chatwoot
-      - typebot-builder
       - typebot-viewer
       - lipagas-bridge
-      - joywo-bridge
-      - presidential-bridge
+    networks:
+      default:
+        aliases:
+          - chat.lipagas.co
+          - flow.lipagas.co
+          - builder.lipagas.co
+          - chat.hisia.app
+          - flow.hisia.app
+          - builder.hisia.app
 
   certbot:
     image: certbot/certbot

@@ -25,6 +25,11 @@ EOSQL
 echo "Restoring Chatwoot snapshot into chatwoot_production..."
 gunzip -c /docker-entrypoint-initdb.d/01-chatwoot.dump.gz | psql --username "$POSTGRES_USER" --dbname "chatwoot_production" || true
 
+if [ -f /docker-entrypoint-initdb.d/03-migrations.sql ]; then
+    echo "Applying Chatwoot v4.17.0 schema migrations..."
+    psql --username "$POSTGRES_USER" --dbname "chatwoot_production" -f /docker-entrypoint-initdb.d/03-migrations.sql || true
+fi
+
 echo "Restoring Typebot snapshot into typebot..."
 gunzip -c /docker-entrypoint-initdb.d/02-typebot.dump.gz | psql --username "$POSTGRES_USER" --dbname "typebot" || true
 

@@ -1,13 +1,13 @@
 # LipaGas Unified System Architecture
 
-This document provides a highly detailed, no-bullshit breakdown of how the LipaGas ecosystem is wired together. It covers the data flow, the Docker container topology, and how the internal components communicate.
+This document provides a highly detailed, no-bullshit breakdown of how the LipaGas ecosystem is wired together. It covers the data flow, the Docker container topology, how the internal components communicate, and how the stack is optimized to run on an **836 MiB RAM VM** (see [VM_OPTIMIZATION_REPORT.md](./VM_OPTIMIZATION_REPORT.md) for the full optimization & benchmark report).
 
 ## 1. High-Level Data Flow
 
 The entire system relies on an Nginx reverse proxy that routes traffic based on domains to 3 main applications:
-- **Chatwoot** (`chat.lipagas.co`, `influence.deepintelgroup.com`)
-- **Typebot** (`builder.lipagas.co`, `flow.lipagas.co`)
-- **LipaGas Bridge** (`flow.lipagas.co/meta-webhook`)
+- **Chatwoot / Influence Dashboard** (`chat.lipagas.co`, `chat.hisia.app`)
+- **Typebot** (`flow.lipagas.co`, `flow.hisia.app`, `builder.lipagas.co`, `builder.hisia.app`)
+- **LipaGas Bridge** (`flow.lipagas.co/meta-webhook`, `flow.hisia.app/meta-webhook`)
 
 ### The WhatsApp Webhook Journey (End-to-End)
 When a user sends a message on WhatsApp:
@@ -16,32 +16,35 @@ When a user sends a message on WhatsApp:
 3. **Nginx** checks its routing table and sees that `flow.lipagas.co/meta-webhook` is designated for the LipaGas Bridge.
 4. **Nginx** proxies the request to `http://lipagas-bridge:4000/meta-webhook`.
 5. **LipaGas Bridge** (Elixir application) processes the incoming JSON payload.
-6. The Bridge simultaneously sends the payload to:
-   - **Typebot** (via its internal API at `typebot-viewer:3000`) to generate automated conversational responses.
-   - **Chatwoot** (via its API at `chatwoot:3000`) to log the conversation so human agents can see the chat in the dashboard.
+6. The Bridge simultaneously sends the payload over the internal Docker network to:
+   - **Typebot Viewer** (`http://typebot-viewer:3000`) to generate automated conversational responses.
+   - **Chatwoot** (`http://chatwoot:3000`) to log the conversation so human agents can see the chat in the dashboard.
 7. **Typebot** responds with the next flow step, and the Bridge uses the Meta Graph API to send the text/interactive message back to the WhatsApp user.
 
-## 2. Docker Compose Topology
+## 2. Docker Compose Topology (`docker-compose.deploy.yml`)
 
-The `docker-compose.deploy.yml` completely encapsulates this architecture so it is 100% portable.
+### Core Services (Active 24/7)
+- **postgres (`pgvector/pgvector:pg16`):** Central storage containing two isolated databases (`chatwoot_production` and `typebot`), tuned for low memory (`shared_buffers=64MB`, `max_connections=40`).
+- **redis (`redis:alpine`):** Authenticated in-memory queue (`--maxmemory 64mb --maxmemory-policy allkeys-lru`) used by Chatwoot, Sidekiq, and the LipaGas Bridge.
+- **chatwoot + Embedded Sidekiq (`chatwoot/chatwoot:v4.17.0`):** The main Rails server exposing the human-agent dashboard and REST APIs on port 3000, with **Sidekiq 7.3 embedded inside the Puma process** via `99_embedded_sidekiq.rb` (`EMBED_SIDEKIQ=true`, `SIDEKIQ_CONCURRENCY=2`) to save ~430 MiB of RAM.
+- **typebot-viewer:** The execution engine for live chat flows (`flow.lipagas.co` / `flow.hisia.app`).
+- **lipagas-bridge:** Custom Elixir application acting as middleware between Meta WhatsApp, M-Pesa Daraja, Stronpower, Chatwoot, and Typebot.
+- **nginx:** Reverse proxy with dynamic Docker DNS resolution (`127.0.0.11`) and Let's Encrypt SSL certificates for both `*.lipagas.co` and `*.hisia.app`.
+- **certbot:** Sidecar container that wakes up every 12 hours to renew Let's Encrypt SSL certificates.
 
-### Core Services
-- **postgres (16-alpine):** The central nervous system for storage. Contains two distinct databases (`chatwoot_production` and `typebot`) isolated from each other.
-- **redis (alpine):** An in-memory queue used by Chatwoot's Sidekiq workers and Typebot for caching real-time sessions.
-- **chatwoot (web):** The main Rails server exposing the human-agent dashboard and REST APIs on port 3000.
-- **sidekiq (worker):** Chatwoot's background job processor (handles emails, push notifications, and async tasks).
-- **typebot-builder:** The visual drag-and-drop dashboard for creating chat flows (exposed at `builder.lipagas.co`).
-- **typebot-viewer:** The execution engine for the flows (exposed at `flow.lipagas.co`).
-- **lipagas-bridge:** The custom Elixir application that acts as the middleware between Meta, Chatwoot, and Typebot.
-- **nginx:** The traffic cop. Routes external domains to internal Docker network addresses.
-- **certbot:** A sidecar container that wakes up every 12 hours to renew Let's Encrypt SSL certificates.
+### Optional / On-Demand Services (`profiles: ["extras"]`)
+- **typebot-builder**, **joywo-bridge**, **presidential-bridge**, and standalone **sidekiq** are assigned to `profiles: ["extras"]` and can be started anytime with:
+  ```bash
+  sudo docker compose -f docker-compose.deploy.yml --profile extras up -d <service>
+  ```
 
-## 3. Database Initialization Strategy
+## 3. Database Initialization & Migration Strategy
 
-When the unified stack is launched on the new VM for the first time, the `postgres` container reads from the `/docker-entrypoint-initdb.d` folder.
-It executes `00-create-dbs.sql` to initialize the dual schemas.
-Then, it automatically consumes `01-chatwoot.sql` and `02-typebot.sql` to perfectly restore the system state without manual intervention.
+When the unified stack is launched for the first time, the `postgres` container executes `/docker-entrypoint-initdb.d/00-init.sh`:
+1. Initializes the `chatwoot_production` and `typebot` databases and roles.
+2. Restores `01-chatwoot.dump.gz` (which includes all 41 Chatwoot v4.17.0 schema migrations) and runs `03-migrations.sql` idempotently.
+3. Restores `02-typebot.dump.gz` into `typebot`.
 
-## 4. Environment Secrets
+## 4. Verification & Health Checks
 
-All sensitive variables (Meta Tokens, M-Pesa Passkeys, database passwords) are centrally managed in a single `.env` file at the root of the deployment directory. The containers read these environment variables at boot time. None of these secrets are baked into the Docker images.
+Run `./verify_stack.sh` at any time to verify system memory/zram status, Docker container health, database integrity, SSL certificates, and live endpoint latencies.
