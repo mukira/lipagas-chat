@@ -278,4 +278,7 @@ INSERT INTO agent_bot_inboxes (inbox_id, agent_bot_id, status, created_at, updat
 SELECT 10, 2, 0, NOW(), NOW(), 1
 WHERE NOT EXISTS (SELECT 1 FROM agent_bot_inboxes WHERE inbox_id = 10);
 
+UPDATE conversations SET status = 0, assignee_id = 1 WHERE account_id = 1 AND (status = 2 OR assignee_id IS NULL);
+
+
 
