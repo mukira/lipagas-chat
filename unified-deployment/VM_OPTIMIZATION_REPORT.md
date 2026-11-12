@@ -122,3 +122,4 @@ unified-deployment-lipagas-bridge-1   Up (Elixir Plug/Bandit)    2.59MiB / 837Mi
 | `GET https://flow.lipagas.co/meta-webhook` (Verify Token) | `HTTP 200 OK` (`987654`) | `0.19s` |
 | `GET https://flow.hisia.app/meta-webhook` (Verify Token) | `HTTP 200 OK` (`987654`) | `0.22s` |
 | `POST https://flow.lipagas.co/api/v1/typebots/lipa-gas-whats-app-bot-o9nfrww/startChat` | `HTTP 200 OK` (`sessionId` created) | `0.45s` |
+
