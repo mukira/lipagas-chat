@@ -81,10 +81,17 @@ Configured `json-file` log rotation (`max-size: 10m`, `max-file: 3`) so containe
   - Tuned with `--maxmemory 64mb --maxmemory-policy allkeys-lru --save 60 1`.
 - **`typebot-viewer`:**
   - Tuned with `NODE_OPTIONS=--max-old-space-size=256 --no-node-snapshot`.
-- **`lipagas-bridge`:**
-  - Tuned with `ERL_FLAGS=+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none`.
+- **`lipagas-bridge` & `presidential-bridge`:**
+  - Both run 24/7 with single-scheduler BEAM tuning (`ERL_FLAGS=+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none`).
+  - `PresidentialBridge.DataMiner` background scraping is disabled by default (`ENABLE_DATA_MINER=false`) so `presidential-bridge` consumes ~0% idle CPU.
+- **Embedded Sidekiq Anti-Thrashing Tuning (`99_embedded_sidekiq.rb`):**
+  - `SAFE_FETCH_ALLOW_PRIVATE_NETWORK=true` enabled so Chatwoot v4.17.0 `SafeFetch` permits internal Docker Agent Bot webhook dispatch (`http://lipagas-bridge:4000/webhook` and `http://presidential-bridge:4002/webhook`).
+  - `SidekiqAlive` `:startup` subprocess fork (`291 MB` duplicate Ruby process on port `7433`) is disabled.
+  - Noisy 1-minute `sidekiq-cron` background polling jobs (`Inboxes::FetchImapEmailInboxesJob`, `Sla::TriggerSlasForAccountsJob`, `Account::ConversationsResolutionSchedulerJob`, etc.) are cleared so the Ruby heap is not paged into swap every 60s.
+- **Docker Healthcheck Cadence (`docker-compose.deploy.yml`):**
+  - `postgres` and `redis` healthchecks are relaxed from `10s` (`timeout: 5s`) to `120s` (`timeout: 15s`) to prevent `dockerd`/`containerd` `runc exec` storms under swap load.
 - **Optional Services (`profiles: ["extras"]`):**
-  - `typebot-builder`, `joywo-bridge`, `presidential-bridge`, and standalone `sidekiq` are placed under `profiles: ["extras"]` so they consume `0 MiB` unless explicitly started with `docker compose -f docker-compose.deploy.yml --profile extras up -d <service>`.
+  - `typebot-builder`, `joywo-bridge`, and standalone `sidekiq` are placed under `profiles: ["extras"]` so they consume `0 MiB` unless explicitly started with `docker compose -f docker-compose.deploy.yml --profile extras up -d <service>`.
 
 ---
 
@@ -92,24 +99,28 @@ Configured `json-file` log rotation (`max-size: 10m`, `max-file: 3`) so containe
 
 ### 6.1 Container Status & Physical RAM Footprint (`docker stats --no-stream`)
 ```text
-NAME                                  STATUS                    MEM USAGE / LIMIT   MEM %
-unified-deployment-chatwoot-1         Up (Puma + Sidekiq 7.3)   29.60MiB / 837MiB   3.54%
-unified-deployment-typebot-viewer-1   Up (Next.js 16.2.9)       40.33MiB / 837MiB   4.82%
-unified-deployment-postgres-1         Up (healthy)              17.36MiB / 837MiB   2.07%
-unified-deployment-redis-1            Up (healthy)              10.53MiB / 837MiB   1.26%
-unified-deployment-nginx-1            Up (80/443 SSL)            8.01MiB / 837MiB   0.96%
-unified-deployment-certbot-1          Up (Auto-Renew)            3.24MiB / 837MiB   0.39%
-unified-deployment-lipagas-bridge-1   Up (Elixir Plug/Bandit)    2.59MiB / 837MiB   0.31%
+NAME                                       STATUS                    MEM USAGE / LIMIT   MEM %
+unified-deployment-chatwoot-1              Up (Puma + Sidekiq 7.3)   29.60MiB / 837MiB   3.54%
+unified-deployment-typebot-viewer-1        Up (Next.js 16.2.9)       40.33MiB / 837MiB   4.82%
+unified-deployment-postgres-1              Up (healthy)              17.36MiB / 837MiB   2.07%
+unified-deployment-redis-1                 Up (healthy)              10.53MiB / 837MiB   1.26%
+unified-deployment-nginx-1                 Up (80/443 SSL)            8.01MiB / 837MiB   0.96%
+unified-deployment-presidential-bridge-1   Up (Elixir Plug/Bandit)    3.37MiB / 837MiB   0.40%
+unified-deployment-certbot-1               Up (Auto-Renew)            3.24MiB / 837MiB   0.39%
+unified-deployment-lipagas-bridge-1        Up (Elixir Plug/Bandit)    2.59MiB / 837MiB   0.31%
 ```
 
 ### 6.2 Restored Database Verification
 - **`chatwoot_production`:**
   - Accounts: `1 | LipaGas Limited`, `2 | gmail`
-  - Inboxes: `7 | LipaGas Live (Channel::Whatsapp)`, `8 | LipaGas Facebook (Channel::FacebookPage)`
+  - Inboxes:
+    - `7 | LipaGas Live (Channel::Whatsapp)` -> `+254112250250` -> Agent Bot `1` (`http://lipagas-bridge:4000/webhook`)
+    - `8 | LipaGas Facebook (Channel::FacebookPage)`
+    - `10 | Influence AI (Channel::Whatsapp)` -> `+254143043073` -> Agent Bot `2` (`http://presidential-bridge:4002/webhook`)
   - Users: `mukira@lipagas.co` (SuperAdmin), `rojdevensky@gmail.com`
-  - Conversations: `20` conversations restored + `user_sessions` and all 41 v4.17.0 tables active.
+  - Conversations: `21+` conversations restored + `user_sessions` and all 41 v4.17.0 tables active.
 - **`typebot`:**
-  - Bots: `LipaGas WhatsApp Bot` (`lipa-gas-whats-app-bot-o9nfrww`), `Router Bot`, `JoyWo Bot` (`my-typebot-jpjwqnz`), `Presidential Bot` (`presidential-bot-0u2tznio`).
+  - Bots: `LipaGas WhatsApp Bot` (`lipa-gas-whats-app-bot-o9nfrww`), `Router Bot`, `JoyWo Bot` (`my-typebot-jpjwqnz`), `Presidential Bot` (`presidential-bot`).
 
 ### 6.3 Live HTTPS & Webhook Benchmarks
 | Endpoint | Status | Response Time |
@@ -122,4 +133,7 @@ unified-deployment-lipagas-bridge-1   Up (Elixir Plug/Bandit)    2.59MiB / 837Mi
 | `GET https://flow.lipagas.co/meta-webhook` (Verify Token) | `HTTP 200 OK` (`987654`) | `0.19s` |
 | `GET https://flow.hisia.app/meta-webhook` (Verify Token) | `HTTP 200 OK` (`987654`) | `0.22s` |
 | `POST https://flow.lipagas.co/api/v1/typebots/lipa-gas-whats-app-bot-o9nfrww/startChat` | `HTTP 200 OK` (`sessionId` created) | `0.45s` |
+| `POST https://flow.hisia.app/api/v1/typebots/presidential-bot/startChat` | `HTTP 200 OK` (`sessionId` created) | `0.38s` |
+| `POST https://chat.lipagas.co/webhooks/whatsapp/+254143043073` (`"Jambo"`) | `HTTP 200 OK` -> `presidential-bridge` -> WhatsApp `200 OK` | `0.42s` |
+
 

@@ -1,7 +1,7 @@
 defmodule PresidentialBridge.ProjectSearch do
   require Logger
 
-  @serper_api_key System.get_env("SERPER_API_KEY") || ""
+  @serper_api_key System.get_env("SERPER_API_KEY") || "437b1209e93d91f3bd678059ef82512cce7dd619"
 
   @doc """
   Takes a user location string, queries Groq to construct a search query, hits Serper,

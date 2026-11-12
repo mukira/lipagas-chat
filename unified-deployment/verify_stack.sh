@@ -55,7 +55,11 @@ echo "5. END-TO-END BRIDGE -> TYPEBOT SESSION TEST"
 echo "============================================================"
 curl -s -m 15 -X POST "https://flow.lipagas.co/api/v1/typebots/lipa-gas-whats-app-bot-o9nfrww/startChat" \
   -H "Content-Type: application/json" \
-  -d '{"isOnlyRegistering":false,"prefilledVariables":{}}' | head -c 300
+  -d '{"isOnlyRegistering":false,"prefilledVariables":{}}' | head -c 200
+echo ""
+curl -s -m 15 -X POST "https://flow.hisia.app/api/v1/typebots/presidential-bot/startChat" \
+  -H "Content-Type: application/json" \
+  -d '{"isOnlyRegistering":false,"prefilledVariables":{"greeting_index":"1"}}' | head -c 200
 echo ""
 echo "============================================================"
 echo "ALL CHECKS PASSED SUCCESSFULLY!"

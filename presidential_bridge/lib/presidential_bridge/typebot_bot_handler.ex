@@ -9,7 +9,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
   alias PresidentialBridge.{Typebot, Session, HTTP}
 
   @graph_base "https://graph.facebook.com/v21.0"
-  @reset_keywords ~w(reset hi hello start menu back ruto exit)
+  @reset_keywords ~w(reset hi hello start menu back ruto exit jambo habari sasa niaje mambo hey karibu)
   @kenyan_languages [
     # Bare names (as sent from the secondary Typebot choice list)
     "kikuyu", "dholuo", "kalenjin", "kamba", "luhya", "somali", "kisii", "mijikenda", 

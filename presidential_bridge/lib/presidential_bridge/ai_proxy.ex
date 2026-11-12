@@ -13,8 +13,7 @@ defmodule PresidentialBridge.AIProxy do
   @groq_keys [
     System.get_env("GROQ_KEY_1") || "gsk_dummy",
     System.get_env("GROQ_KEY_2") || "gsk_dummy",
-    System.get_env("GROQ_KEY_3") || "gsk_dummy",
-    System.get_env("GROQ_KEY_4") || "gsk_dummy"
+    System.get_env("GROQ_KEY_3") || "gsk_dummy"
   ]
   @groq_key_count length(@groq_keys)
 
@@ -119,7 +118,7 @@ defmodule PresidentialBridge.AIProxy do
                   Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
                   {:ok, reply_with_dialog}
                 {:error, _} ->
-                  {:ok, "I'm having trouble connecting right now. Please try again in a moment."}
+                  {:error, :all_keys_exhausted}
               end
           end
         else
@@ -138,7 +137,7 @@ defmodule PresidentialBridge.AIProxy do
                   Redix.command(:redix, ["SET", cache_key, reply_with_dialog, "EX", Integer.to_string(@cache_ttl)])
                   {:ok, reply_with_dialog}
                 {:error, _} ->
-                  {:ok, "I'm having trouble connecting right now. Please try again in a moment."}
+                  {:error, :all_keys_exhausted}
               end
           end
         end
@@ -293,7 +292,7 @@ defmodule PresidentialBridge.AIProxy do
   defp try_gemini_with_backoff(_prompt, [], _attempt), do: {:error, :all_keys_exhausted}
 
   defp try_gemini_with_backoff(prompt, [key | rest], attempt) do
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=#{key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=#{key}"
     body = %{contents: [%{parts: [%{text: prompt}]}]}
 
     case PresidentialBridge.HTTP.post_json(url, body, []) do

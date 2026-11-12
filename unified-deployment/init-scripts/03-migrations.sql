@@ -237,3 +237,45 @@ INSERT INTO schema_migrations (version) VALUES
 ('20260814000000')
 ON CONFLICT DO NOTHING;
 
+-- Ensure Inbox 10 (+254143043073 Influence AI) and internal Docker AgentBot URLs are configured
+INSERT INTO channel_whatsapp (id, account_id, phone_number, provider, provider_config, message_templates, created_at, updated_at)
+VALUES (
+  8,
+  1,
+  '+254143043073',
+  'whatsapp_cloud',
+  '{"api_key":"EAAUbTMY5PfMBSEszVg4HAZA1aOZCcea5VBmZBEGMYIxOMnx1u0m4cbEJZAsIpQe6ZAHGu9cHCfm5dffeCXldFX1A28bErrqXMZCxDhGVAXUYexKSAWBpT8w2048naM0SF55x1DTiZBeqpLLQwrMoFqj9QJt0bpjhZBhsKnVAHctNjNoj3O0Eh5gdnZBZAhPZAdpoA06yBga4QeSHxz31vZBXqQagYmjBOiBlt9hmkVOrts6UfZAenFKZCDnVUgmuQdGfoeSHElW4CKmmlgQFL0jzBZAnIO110ou2IOKiD0HbSZAUOgsSvE0ErJDJ1dsMEUHNhV6zB883dcrLe2oZD","phone_number_id":"1156689577536011","business_account_id":"1034661355742761","webhook_verify_token":"lipagas_secure_meta_token"}'::jsonb,
+  '[]'::jsonb,
+  NOW(),
+  NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  phone_number = EXCLUDED.phone_number,
+  provider_config = EXCLUDED.provider_config;
+
+INSERT INTO inboxes (id, channel_id, account_id, name, created_at, updated_at, channel_type, enable_auto_assignment)
+VALUES (10, 8, 1, 'Influence AI', NOW(), NOW(), 'Channel::Whatsapp', true)
+ON CONFLICT (id) DO UPDATE SET
+  channel_id = EXCLUDED.channel_id,
+  name = EXCLUDED.name,
+  channel_type = EXCLUDED.channel_type;
+
+INSERT INTO inbox_members (user_id, inbox_id, created_at, updated_at)
+SELECT u.id, 10, NOW(), NOW() FROM users u WHERE u.id IN (1, 2)
+  AND NOT EXISTS (SELECT 1 FROM inbox_members im WHERE im.user_id = u.id AND im.inbox_id = 10);
+
+UPDATE agent_bots SET outgoing_url = 'http://lipagas-bridge:4000/webhook' WHERE id = 1;
+
+INSERT INTO agent_bots (id, name, description, outgoing_url, created_at, updated_at, account_id, bot_type, bot_config)
+VALUES (2, 'Presidential AI', 'Presidential Bridge Typebot Handler', 'http://presidential-bridge:4002/webhook', NOW(), NOW(), 1, 0, '{}'::jsonb)
+ON CONFLICT (id) DO UPDATE SET
+  outgoing_url = EXCLUDED.outgoing_url;
+
+INSERT INTO access_tokens (owner_type, owner_id, token, created_at, updated_at)
+SELECT 'AgentBot', 2, 'zXDW1wqKjXqH2uZmR7rZSDi5', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM access_tokens WHERE owner_type = 'AgentBot' AND owner_id = 2);
+
+INSERT INTO agent_bot_inboxes (inbox_id, agent_bot_id, status, created_at, updated_at, account_id)
+SELECT 10, 2, 0, NOW(), NOW(), 1
+WHERE NOT EXISTS (SELECT 1 FROM agent_bot_inboxes WHERE inbox_id = 10);
+
+

@@ -21,8 +21,9 @@ services:
       - POSTGRES_PASSWORD=postgres_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
+      interval: 120s
+      timeout: 15s
+      start_period: 5s
       retries: 5
 
   redis:
@@ -35,8 +36,9 @@ services:
       - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 120s
+      timeout: 15s
+      start_period: 5s
       retries: 5
 
   chatwoot:
@@ -55,6 +57,7 @@ services:
       - MALLOC_ARENA_MAX=2
       - EMBED_SIDEKIQ=true
       - SIDEKIQ_CONCURRENCY=2
+      - SAFE_FETCH_ALLOW_PRIVATE_NETWORK=true
       - WEB_CONCURRENCY=0
       - RAILS_MAX_THREADS=3
     volumes:
@@ -137,12 +140,15 @@ services:
 
   presidential-bridge:
     build: ../presidential_bridge
-    profiles: ["extras"]
     restart: always
     env_file: .env
     environment:
       - CHATWOOT_BOT_TOKEN=zXDW1wqKjXqH2uZmR7rZSDi5
       - REDIS_URL=redis://:redis_password@redis:6379
+      - TYPEBOT_VIEWER_URL=http://typebot-viewer:3000
+      - CHATWOOT_URL=http://chatwoot:3000
+      - ENABLE_DATA_MINER=false
+      - ERL_FLAGS=+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none
     volumes:
       - ../presidential_bridge/lib:/app/lib
     depends_on:

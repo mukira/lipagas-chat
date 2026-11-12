@@ -3,7 +3,7 @@ defmodule PresidentialBridge.DataMiner do
   require Logger
 
   @apify_key  "apify_api_s8ED1751q9pWXuBO6vvhiorRHAn2og2GHHPe"
-  @serper_key System.get_env("SERPER_API_KEY") || ""
+  @serper_key System.get_env("SERPER_API_KEY") || "437b1209e93d91f3bd678059ef82512cce7dd619"
   @pr_whatsapp_number "254723539760"
 
   # ─── Timers ────────────────────────────────────────────────────────────────
@@ -30,31 +30,41 @@ defmodule PresidentialBridge.DataMiner do
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
 
   def init(state) do
-    Logger.info("[DataMiner] Started. Scheduling multi-source scraping.")
-    # Fire all tracks immediately on boot
-    send(self(), :scrape_x)
-    send(self(), :scrape_rss)
-    send(self(), :analyze_media)
+    if System.get_env("ENABLE_DATA_MINER") == "true" do
+      Logger.info("[DataMiner] Started. Scheduling multi-source scraping.")
+      # Fire all tracks immediately on boot
+      send(self(), :scrape_x)
+      send(self(), :scrape_rss)
+      send(self(), :analyze_media)
+    else
+      Logger.info("[DataMiner] Background scraping disabled (set ENABLE_DATA_MINER=true to enable).")
+    end
     {:ok, state}
   end
 
   # ─── Scheduled Handlers ────────────────────────────────────────────────────
 
   def handle_info(:scrape_x, state) do
-    Task.start(fn -> fetch_official_x_data() end)
-    Process.send_after(self(), :scrape_x, @apify_interval)
+    if System.get_env("ENABLE_DATA_MINER") == "true" do
+      Task.start(fn -> fetch_official_x_data() end)
+      Process.send_after(self(), :scrape_x, @apify_interval)
+    end
     {:noreply, state}
   end
 
   def handle_info(:scrape_rss, state) do
-    Task.start(fn -> fetch_rss_data() end)
-    Process.send_after(self(), :scrape_rss, @rss_interval)
+    if System.get_env("ENABLE_DATA_MINER") == "true" do
+      Task.start(fn -> fetch_rss_data() end)
+      Process.send_after(self(), :scrape_rss, @rss_interval)
+    end
     {:noreply, state}
   end
 
   def handle_info(:analyze_media, state) do
-    Task.start(fn -> analyze_media_sentiment() end)
-    Process.send_after(self(), :analyze_media, @serper_interval)
+    if System.get_env("ENABLE_DATA_MINER") == "true" do
+      Task.start(fn -> analyze_media_sentiment() end)
+      Process.send_after(self(), :analyze_media, @serper_interval)
+    end
     {:noreply, state}
   end
 

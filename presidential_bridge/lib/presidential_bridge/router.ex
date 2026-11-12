@@ -255,10 +255,12 @@ defmodule PresidentialBridge.Router do
     conn = send_resp(conn, 200, "OK")
     Task.start(fn ->
       try do
-        # We know this webhook is exclusively for the Presidential bot
-        # So we hardcode the active slug to the Typebot slug for that bot
-        active_slug = PresidentialBridge.Config.presidential_bot_id()
-        PresidentialBridge.TypebotBotHandler.handle(conn.body_params, active_slug)
+        if conn.body_params["event"] == "message_created" and conn.body_params["message_type"] == "incoming" do
+          # We know this webhook is exclusively for the Presidential bot
+          # So we hardcode the active slug to the Typebot slug for that bot
+          active_slug = PresidentialBridge.Config.presidential_bot_id()
+          PresidentialBridge.TypebotBotHandler.handle(conn.body_params, active_slug)
+        end
       rescue
         e -> IO.puts("[Presidential Bridge Webhook Error] #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
       end
