@@ -9,7 +9,8 @@ defmodule PresidentialBridge.TypebotBotHandler do
   alias PresidentialBridge.{Typebot, Session, HTTP}
 
   @graph_base "https://graph.facebook.com/v21.0"
-  @reset_keywords ~w(reset hi hello start menu back ruto exit jambo habari sasa niaje mambo hey karibu)
+  @activation_keywords ["bonga na rais", "ruto"]
+  @reset_keywords ["bonga na rais", "ruto", "reset", "start", "menu", "back"]
   @kenyan_languages [
     # Bare names (as sent from the secondary Typebot choice list)
     "kikuyu", "dholuo", "kalenjin", "kamba", "luhya", "somali", "kisii", "mijikenda", 
@@ -60,37 +61,13 @@ defmodule PresidentialBridge.TypebotBotHandler do
     if is_nil(meta) or is_nil(phone) or phone == "" do
       IO.puts("[TypebotBotHandler] Missing meta config for inbox_id=#{inbox_id} or phone. Skipping.")
     else
-      # --- INTERCEPTOR: Projects Near Me Location Input ---
-      awaiting = Redix.command!(:redix, ["GET", "awaiting_location:#{phone}"]) == "true"
-      
-      # --- GLOBAL LANGUAGE INTERCEPTOR ---
-      if msg_lower in @kenyan_languages and not awaiting do
-        Session.set_language(phone, content)
-        IO.puts("[TypebotBotHandler] Global intercept: Saved persistent language for #{phone}: #{content}")
-      end
-      
-      is_projects_btn = msg_lower in [
-        "📍 projects near me", 
-        "📍 miradi karibu nami", 
-        "📍 projects area yangu",
-        "projects near me",
-        "miradi karibu nami",
-        "projects area yangu"
-      ]
-
-      is_news_btn = msg_lower in [
-        "📰 rais news",
-        "rais news",
-        "📰 president's updates",
-        "📰 taarifa za rais",
-        "📰 rada ya prezzo",
-        "📰 habari mpya",
-        "habari mpya"
-      ]
-
       is_otp_verify = String.match?(msg_lower, ~r/^(verify\s+)?\d{4,8}$/i) or
                       String.match?(msg_lower, ~r/^verify\b/i) or
                       String.match?(msg_lower, ~r/^\d{4,8}$/)
+
+      active_session = Session.get_session(conv_id)
+      is_exact_trigger = msg_lower in @activation_keywords
+      is_exit_cmd = msg_lower in ["exit", "stop", "quit", "opt out"]
 
       cond do
         is_otp_verify ->
@@ -106,7 +83,49 @@ defmodule PresidentialBridge.TypebotBotHandler do
             end
           end)
 
-        awaiting and msg_lower not in @reset_keywords ->
+        is_exit_cmd ->
+          IO.puts("[TypebotBotHandler] Exit/Stop received — clearing Presidential Bot session for conv #{conv_id}")
+          Session.delete_session(conv_id)
+          Session.delete_greeting(conv_id)
+          Redix.command(:redix, ["DEL", "awaiting_location:#{phone}", "news_index:#{phone}", "projects_index:#{phone}"])
+
+        not is_exact_trigger and is_nil(active_session) ->
+          IO.puts("[TypebotBotHandler] Ignoring normal chat message #{inspect(content)} on conv #{conv_id} (Presidential Bot disabled unless exact trigger is sent).")
+          if get_in(payload, ["conversation", "status"]) == "pending" do
+            PresidentialBridge.Chatwoot.update_status(conv_id, "open")
+          end
+
+        true ->
+          # --- INTERCEPTOR: Projects Near Me Location Input ---
+          awaiting = Redix.command!(:redix, ["GET", "awaiting_location:#{phone}"]) == "true"
+          
+          # --- GLOBAL LANGUAGE INTERCEPTOR ---
+          if msg_lower in @kenyan_languages and not awaiting do
+            Session.set_language(phone, content)
+            IO.puts("[TypebotBotHandler] Global intercept: Saved persistent language for #{phone}: #{content}")
+          end
+          
+          is_projects_btn = msg_lower in [
+            "📍 projects near me", 
+            "📍 miradi karibu nami", 
+            "📍 projects area yangu",
+            "projects near me",
+            "miradi karibu nami",
+            "projects area yangu"
+          ]
+
+          is_news_btn = msg_lower in [
+            "📰 rais news",
+            "rais news",
+            "📰 president's updates",
+            "📰 taarifa za rais",
+            "📰 rada ya prezzo",
+            "📰 habari mpya",
+            "habari mpya"
+          ]
+
+          cond do
+            awaiting and msg_lower not in @reset_keywords ->
           IO.puts("[TypebotBotHandler] Intercepting location: #{content}")
           Redix.command!(:redix, ["DEL", "awaiting_location:#{phone}"])
           
@@ -328,6 +347,7 @@ defmodule PresidentialBridge.TypebotBotHandler do
 
             true ->
               process_default_typebot_flow(conv_id, inbox_id, phone, content, msg_lower, slug, payload, meta, matched_btn, is_deep_switch)
+          end
           end
       end
     end

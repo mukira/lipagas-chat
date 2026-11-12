@@ -255,11 +255,21 @@ defmodule PresidentialBridge.Router do
     conn = send_resp(conn, 200, "OK")
     Task.start(fn ->
       try do
-        if conn.body_params["event"] == "message_created" and conn.body_params["message_type"] == "incoming" do
-          # We know this webhook is exclusively for the Presidential bot
-          # So we hardcode the active slug to the Typebot slug for that bot
-          active_slug = PresidentialBridge.Config.presidential_bot_id()
-          PresidentialBridge.TypebotBotHandler.handle(conn.body_params, active_slug)
+        cond do
+          conn.body_params["event"] == "message_created" and conn.body_params["message_type"] == "outgoing" ->
+            # Human agent replied from Chatwoot — immediately terminate any active bot session
+            conv_id = get_in(conn.body_params, ["conversation", "id"])
+            if conv_id do
+              IO.puts("[Presidential Bridge Webhook] Agent replied on conv #{conv_id} — clearing any active Presidential Bot session.")
+              PresidentialBridge.Session.delete_session(conv_id)
+            end
+
+          conn.body_params["event"] == "message_created" and conn.body_params["message_type"] == "incoming" ->
+            active_slug = PresidentialBridge.Config.presidential_bot_id()
+            PresidentialBridge.TypebotBotHandler.handle(conn.body_params, active_slug)
+
+          true ->
+            :ok
         end
       rescue
         e -> IO.puts("[Presidential Bridge Webhook Error] #{inspect(e)}\n#{Exception.format(:error, e, __STACKTRACE__)}")
